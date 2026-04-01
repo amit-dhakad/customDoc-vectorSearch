@@ -1,0 +1,48 @@
+# ── Python ────────────────────────────────────────────────────────────────
+# Bytecode cache — generated automatically by Python at runtime.
+# Safe to delete any time; Python recreates them on the next run.
+__pycache__/
+*.py[cod]          # .pyc  .pyo  .pyd
+*.pyd
+
+# Distribution / packaging
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual Environments ──────────────────────────────────────────────────
+# Never commit the venv — it's machine-specific and can be recreated with:
+#   python -m venv venv && pip install -r requirements.txt
+venv/
+.venv/
+env/
+.env/
+
+# ── Environment / Secrets ─────────────────────────────────────────────────
+# API keys, DB passwords, etc. — NEVER commit these.
+.env
+.env.*
+!.env.example       # allow the example/template file to be committed
+
+# ── Testing & Coverage ────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# ── IDEs & Editors ────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ── OS generated files ────────────────────────────────────────────────────
+.DS_Store           # macOS
+Thumbs.db           # Windows
+desktop.ini
+
+# ── Misc ──────────────────────────────────────────────────────────────────
+*.tmp
+*.bak

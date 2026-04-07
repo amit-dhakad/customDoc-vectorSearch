@@ -1,143 +1,128 @@
 """
-pdf_parser.py — PDF document parser using PyMuPDF (fitz).
+app/core/parsers/pdf_parser.py — The Dual-Engine PDF Extraction Suite.
 
 HOW PDF PARSING WORKS
 ─────────────────────────────────────────────────────────────────────────────
-A PDF file is NOT plain text.  It is a binary format that stores:
-  • Glyphs (visual characters) with x/y coordinates on a canvas.
-  • Fonts, images, vector graphics, annotations.
-  • An optional text-object layer (ToUnicode maps glyph IDs → Unicode chars).
+A PDF is a binary container format, not a plain text file. It stores:
+  • Glyphs (visual characters) with absolute (x,y) coordinates.
+  • Fonts, vector graphics, and metadata.
+  • An optional /ToUnicode map (ID → Unicode characters).
 
-PDF parsing means reconstructing readable text from these glyph positions.
-Libraries like PyMuPDF (libmupdf under the hood) do this reconstruction by:
+Parsing involves reconstructing readable text from these glyph positions.
+Different libraries use different heuristics to achieve this.
 
-  1. Parsing the PDF page cross-reference table (xref) to find page objects.
-  2. For each page, running a "text extraction device" that visits every
-     content stream operator (BT … ET blocks in PDF syntax).
-  3. Mapping glyph IDs through the font's ToUnicode CMap to Unicode code points.
-  4. Reordering characters by reading order (using bounding-box heuristics)
-     so the output text flows left-to-right, top-to-bottom.
-  5. Inserting newlines at line breaks and paragraph boundaries.
-
-IMPORTANT LIMITATIONS
+OUR DUAL-ENGINE STRATEGY
 ─────────────────────────────────────────────────────────────────────────────
-  • Scanned PDFs (images of printed pages) contain NO text layer.
-    `page.get_text()` returns an empty string for those pages.
-    True extraction from scanned PDFs requires an OCR step (e.g. Tesseract).
-  • Columns, tables, and multi-column layouts can produce text in the wrong
-    order because the PDF stores glyphs by draw order, not reading order.
-  • Password-encrypted PDFs cannot be opened without the correct password.
+We provide two distinct engines, allowing the caller to prioritize:
+  1. FITZ (PyMuPDF - Default):
+     • PROS: Extreme speed (C-based), handles large files easily.
+     • CONS: Can sometimes scramble complex multi-column layouts or tables.
+  2. PDFPLUMBER:
+     • PROS: High visual fidelity. Preserves layout, margins, and whitespace.
+     • CONS: Significantly slower (pure Python-based processing). Best for
+             complex tables or documents where formatting is crucial.
 
-WHY PAGE-BY-PAGE ITERATION?
+AUTOMATIC OCR FALLBACK
 ─────────────────────────────────────────────────────────────────────────────
-We iterate page-by-page (rather than using doc.get_text() on the whole doc)
-because:
-  a) It lets us attach page-number metadata to each chunk later in the
-     pipeline (crucial for source citations in the RAG UI).
-  b) It avoids loading the entire document into memory at once — useful for
-     large PDFs (hundreds of pages).
-
-DEPENDENCY: PyMuPDF
-    pip install pymupdf
-    Import name: `import fitz`   (fitz is the legacy PyMuPDF module name)
+If a page has no text layer (e.g. it is a scanned document), the parser
+can fallback to OCR (Tesseract) to "see" the text visually.
 """
 
 from __future__ import annotations
-
 import logging
-
-import fitz  # PyMuPDF — `pip install pymupdf`
+from typing import Literal
+import fitz  # PyMuPDF
+import pdfplumber
 
 from .base_parser import BaseParser
 
-logger = logging.getLogger(__name__)
+# Optional OCR Support
+try:
+    from PIL import Image
+    import pytesseract
+    HAS_OCR = True
+except ImportError:
+    HAS_OCR = False
 
+logger = logging.getLogger(__name__)
 
 class PDFParser(BaseParser):
     """
-    Extracts plain text from PDF files using PyMuPDF.
-
-    Parsing strategy:
-        • Open the PDF with `fitz.open()`.
-        • Iterate over every page.
-        • Call `page.get_text("text")` on each page — this triggers PyMuPDF's
-          built-in text reconstruction pipeline described above.
-        • Join pages with a `\\n\\n` separator so downstream chunkers can
-          recognise page boundaries as natural split points.
+    Modular PDF extractor supporting dynamic engine selection (fitz vs pdfplumber).
     """
 
-    def _extract_text(self, file_path: str) -> str:
+    def __init__(self, ocr_fallback: bool = True) -> None:
         """
-        Extract text from a PDF file page by page.
-
         Args:
-            file_path: Path to the .pdf file (already validated by BaseParser).
+            ocr_fallback: If True, attempt OCR when a page is found to be empty.
+                          Requires pytesseract and tesseract binary.
+        """
+        self.ocr_enabled = ocr_fallback and HAS_OCR
+        if ocr_fallback and not HAS_OCR:
+            logger.warning("PDFParser: OCR requested but dependencies not found.")
 
-        Returns:
-            All pages' text joined by double newlines.
+    def _extract_text(self, file_path: str, engine: Literal["fitz", "pdfplumber"] = "fitz", **kwargs) -> str:
+        """
+        Implementation of the abstract method.
+        Routes the request to the specified PDF engine.
+        """
+        logger.info("PDFParser: Extraction starting (engine=%s, file=%s)", engine, file_path)
 
-        Raises:
-            Any fitz exception propagates to BaseParser which wraps it in
-            RuntimeError with a uniform message.
+        if engine == "pdfplumber":
+            return self._run_pdfplumber(file_path)
+        else:
+            return self._run_fitz(file_path)
+
+    def _run_fitz(self, file_path: str) -> str:
+        """
+        PyMuPDF Engine — Focus: High Performance.
+        Iterates page-by-page, visiting every text operator in the PDF stream.
         """
         page_texts: list[str] = []
-
-        # ── Open the PDF document ──────────────────────────────────────────
-        #
-        # `fitz.open()` parses the PDF's cross-reference table and prepares
-        # page objects.  It does NOT load all page content into RAM yet —
-        # individual pages are decoded lazily when accessed.
-        #
-        # `with` ensures the file handle is released after we're done,
-        # even if an exception occurs mid-iteration.
         with fitz.open(file_path) as doc:
-            total_pages = doc.page_count
-            logger.info(
-                "PDFParser: opening %s  (%d pages)", file_path, total_pages
-            )
+            for i, page in enumerate(doc, start=1):
+                text: str = page.get_text("text")
 
-            for page_index in range(total_pages):
-                # ── Load one page ──────────────────────────────────────────
-                #
-                # `doc[page_index]` returns a `fitz.Page` object.
-                # The raw PDF page content stream is decoded here.
-                page = doc[page_index]
-
-                # ── Extract text from this page ────────────────────────────
-                #
-                # `get_text("text")` mode:
-                #   • Reconstructs text in reading order (top→bottom,
-                #     left→right) using bounding-box heuristics.
-                #   • Inserts newlines between text lines.
-                #   • Returns an empty string for image-only pages.
-                #
-                # Other available modes (not used here):
-                #   "html"  → HTML with styled spans (useful if you want to
-                #             preserve bold/italic for later processing)
-                #   "dict"  → structured dict with spans, fonts, bboxes
-                #             (useful for table extraction or metadata mining)
-                #   "words" → list of (x0,y0,x1,y1,word,…) tuples
-                page_text: str = page.get_text("text")
-
-                if page_text.strip():
-                    # Prepend a page marker comment so the chunker can
-                    # optionally use it as a metadata signal.
-                    page_texts.append(f"[Page {page_index + 1}]\n{page_text}")
+                if text.strip():
+                    page_texts.append(f"[Page {i}]\n{text}")
+                elif self.ocr_enabled:
+                    # Fallback to OCR for scanned pages
+                    ocr_text = self._ocr_page_fitz(page)
+                    if ocr_text.strip():
+                        page_texts.append(f"[Page {i} (OCR)]\n{ocr_text}")
                 else:
-                    # Log but do NOT raise — a scanned page inside a
-                    # mixed PDF is normal.  The ingestion will simply
-                    # produce fewer chunks for this page.
-                    logger.warning(
-                        "PDFParser: page %d of %s yielded no text "
-                        "(possibly a scanned/image page).",
-                        page_index + 1,
-                        file_path,
-                    )
+                    logger.warning("PDFParser [fitz]: Page %d yielded no text layer.", i)
 
-        # ── Join all pages ─────────────────────────────────────────────────
-        #
-        # Double newlines ("\n\n") between pages act as a strong paragraph
-        # boundary.  RecursiveCharacterTextSplitter (used in the chunker)
-        # treats "\n\n" as a preferred split point, so page boundaries will
-        # naturally align with chunk boundaries when the page text is short.
         return "\n\n".join(page_texts)
+
+    def _run_pdfplumber(self, file_path: str) -> str:
+        """
+        pdfplumber Engine — Focus: Visual Precision.
+        Best for documents with complex grid-based layouts or tables.
+        """
+        page_texts: list[str] = []
+        with pdfplumber.open(file_path) as pdf:
+            for i, page in enumerate(pdf.pages, start=1):
+                text: str | None = page.extract_text()
+
+                if text and text.strip():
+                    page_texts.append(f"[Page {i}]\n{text}")
+                else:
+                    logger.warning("PDFParser [pdfplumber]: Page %d yielded no text layer.", i)
+
+        return "\n\n".join(page_texts)
+
+    def _ocr_page_fitz(self, page: fitz.Page) -> str:
+        """Helper to render a PDF page at 300 DPI and run Tesseract OCR."""
+        try:
+            # 300 DPI for high-quality OCR (72 is standard, so 300/72 = 4.16 zoom)
+            zoom = 300 / 72
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat, alpha=False)
+            
+            # raw bytes -> PIL -> Tesseract
+            img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            return pytesseract.image_to_string(img)
+        except Exception as e:
+            logger.error("PDFParser: OCR failed for page %d: %s", page.number + 1, e)
+            return ""

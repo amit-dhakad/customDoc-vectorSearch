@@ -1,0 +1,38 @@
+# ── Docker Compose Configuration ──────────────────────────────────────────
+
+version: '3.8'
+
+services:
+  # ── ML Service: Parsing Engine (PDF, OCR, etc.) ───────────────────────
+  ml-service:
+    build: 
+      context: ./ml-service
+      dockerfile: Dockerfile
+    container_name: ml-service
+    ports:
+      - "8001:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    networks:
+      - customdoc-network
+    restart: always
+
+  # ── Backend Service: API Gateway & Logic ──────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: backend
+    ports:
+      - "8000:8000"
+    environment:
+      - ML_SERVICE_URL=http://ml-service:8000
+    depends_on:
+      - ml-service
+    networks:
+      - customdoc-network
+    restart: always
+
+networks:
+  customdoc-network:
+    driver: bridge

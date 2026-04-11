@@ -8,6 +8,14 @@ python-multipart>=0.0.9          # Required for file uploads
 # External API client
 httpx>=0.27.0                    # To communicate with ml-service
 
+# Database
+sqlalchemy>=2.0.0
+databases[sqlite]>=0.8.0
+
+# Real-time
+websockets>=12.0
+
 # Utilities
 pydantic-settings>=2.2.0
 python-dotenv>=1.0.0
+

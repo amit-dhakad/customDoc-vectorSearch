@@ -1,37 +1,87 @@
-# ── Docker Compose Configuration ──────────────────────────────────────────
+# ── Unified Docker Compose (Profiles: dev, prod) ─────────────────────────────
 
 version: '3.8'
+name: customdoc-vectorsearch
+
+# ── Shared Base Configurations (Extensions) ──────────────────────────────────
+x-base: &base-service
+  networks:
+    - customdoc-network
+  restart: always
 
 services:
-  # ── ML Service: Parsing Engine (PDF, OCR, etc.) ───────────────────────
+  # ── ML SERVICE ─────────────────────────────────────────────────────────────
   ml-service:
+    <<: *base-service
+    profiles: ["prod"]
     build: 
       context: ./ml-service
       dockerfile: Dockerfile
-    container_name: ml-service
-    ports:
-      - "8001:8000"
+    ports: ["8001:8000"]
     environment:
       - PYTHONUNBUFFERED=1
-    networks:
-      - customdoc-network
-    restart: always
+      - BACKEND_URL=http://backend:8000
 
-  # ── Backend Service: API Gateway & Logic ──────────────────────────────
+  ml-service-dev:
+    <<: *base-service
+    profiles: ["dev"]
+    build: 
+      context: ./ml-service
+      dockerfile: Dockerfile
+    volumes: ["./ml-service:/app"]
+    ports: ["8001:8000"]
+    environment:
+      - PYTHONUNBUFFERED=1
+      - BACKEND_URL=http://backend-dev:8000
+      - WATCHFILES_FORCE_POLLING=true
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+  # ── BACKEND SERVICE ────────────────────────────────────────────────────────
   backend:
+    <<: *base-service
+    profiles: ["prod"]
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: backend
-    ports:
-      - "8000:8000"
+    ports: ["8000:8000"]
+    environment: ["ML_SERVICE_URL=http://ml-service:8000"]
+    depends_on: ["ml-service"]
+
+  backend-dev:
+    <<: *base-service
+    profiles: ["dev"]
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes: ["./backend:/app"]
+    ports: ["8000:8000"]
     environment:
-      - ML_SERVICE_URL=http://ml-service:8000
-    depends_on:
-      - ml-service
-    networks:
-      - customdoc-network
-    restart: always
+      - ML_SERVICE_URL=http://ml-service-dev:8000
+      - WATCHFILES_FORCE_POLLING=true
+    command: uvicorn app.server:app --host 0.0.0.0 --port 8000 --reload
+    depends_on: ["ml-service-dev"]
+
+  # ── FRONTEND SERVICE ───────────────────────────────────────────────────────
+  frontend:
+    <<: *base-service
+    profiles: ["prod"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports: ["3000:80"]
+    depends_on: ["backend"]
+
+  frontend-dev:
+    <<: *base-service
+    profiles: ["dev"]
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports: ["3000:3000"]
+    depends_on: ["backend-dev"]
 
 networks:
   customdoc-network:

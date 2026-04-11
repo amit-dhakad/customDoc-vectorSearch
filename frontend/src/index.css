@@ -1,0 +1,205 @@
+:root {
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --bg-dark: #0f1115;
+  --bg-card: rgba(23, 25, 35, 0.7);
+  --glass: rgba(255, 255, 255, 0.05);
+  --text-main: #f8fafc;
+  --text-dim: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #10b981;
+  --error: #ef4444;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+  color: var(--text-main);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Glassmorphism utility */
+.glass-effect {
+  background: var(--glass);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+/* Hide scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+.layout-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+}
+
+.sidebar {
+  width: 280px;
+  background: rgba(15, 17, 21, 0.95);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px;
+  z-index: 50;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: auto;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.chat-input-container {
+  padding: 24px;
+  background: linear-gradient(to top, var(--bg-dark), transparent);
+  position: sticky;
+  bottom: 0;
+  width: 100%;
+}
+
+.chat-input-wrapper {
+  max-width: 800px;
+  margin: 0 auto;
+  display: flex;
+  gap: 12px;
+  padding: 8px;
+}
+
+.input-field {
+  flex: 1;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 20px;
+  color: white;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--primary);
+}
+
+.message-bubble {
+  max-width: 80%;
+  padding: 16px 20px;
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.user-message {
+  align-self: flex-end;
+  background: var(--primary);
+  border-radius: 20px 20px 4px 20px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.ai-message {
+  align-self: flex-start;
+  background: var(--glass);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 20px 4px;
+}
+
+.terminal-window {
+  background: #000;
+  border-radius: 12px;
+  font-family: 'Fira Code', monospace;
+  padding: 20px;
+  color: #0f0;
+  font-size: 13px;
+  height: 300px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+}
+
+.log-line {
+  margin-bottom: 4px;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.card-interactive {
+  padding: 32px;
+  border-radius: 24px;
+  cursor: pointer;
+  text-align: left;
+  border: 1px solid var(--border);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  background: var(--glass);
+}
+
+.card-interactive:hover {
+  transform: translateY(-8px);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--primary);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
+}
+
+.success-badge {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  padding: 8px 16px;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 0 auto 24px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}

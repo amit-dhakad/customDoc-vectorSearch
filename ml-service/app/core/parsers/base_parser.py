@@ -1,5 +1,10 @@
 """
-app/core/parsers/base_parser.py — Abstract Base Class for all document parsers.
+Abstract Parser Foundation
+--------------------------
+This module defines the BaseParser class, which implements the Template Method 
+design pattern. It provides a consistent interface for all extraction engines 
+(PDF, DOCX, etc.) while handling universal concerns like file validation, 
+error wrapping, and quality checks.
 
 WHY AN ABSTRACT BASE CLASS?
 ─────────────────────────────────────────────────────────────────────────────

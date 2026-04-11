@@ -1,19 +1,21 @@
-# ── ML Service Docker Image ──────────────────────────────────────────
-
-# Use a Python 3.10-slim base image for stability and smaller size
+# Simple CPU-only Dockerfile for ML Service
 FROM python:3.10-slim
 
 # Prevent writing .pyc files and ensure real-time terminal logging
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-# Install system dependencies (OCR bridge, image processing, PDF rendering)
+# Install system dependencies for Tesseract OCR and PDF handling
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     libtesseract-dev \
     poppler-utils \
     libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
+
+# Map python command
+RUN ln -s /usr/bin/python3 /usr/bin/python
 
 # Establish the working directory
 WORKDIR /app

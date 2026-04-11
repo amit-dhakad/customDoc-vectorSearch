@@ -20,7 +20,7 @@ We provide two distinct engines, allowing the caller to prioritize:
   2. PDFPLUMBER:
      • PROS: High visual fidelity. Preserves layout, margins, and whitespace.
      • CONS: Significantly slower (pure Python-based processing). Best for
-             complex tables or documents where formatting is crucial.
+              complex tables or documents where formatting is crucial.
 
 AUTOMATIC OCR FALLBACK
 ─────────────────────────────────────────────────────────────────────────────
@@ -67,26 +67,39 @@ class PDFParser(BaseParser):
         Routes the request to the specified PDF engine.
         """
         logger.info("PDFParser: Extraction starting (engine=%s, file=%s)", engine, file_path)
+        client_id = kwargs.get('client_id')
+        reporter = kwargs.get('reporter')
 
         if engine == "pdfplumber":
-            return self._run_pdfplumber(file_path)
+            return self._run_pdfplumber(file_path, client_id, reporter)
         else:
-            return self._run_fitz(file_path)
+            return self._run_fitz(file_path, client_id, reporter)
 
-    def _run_fitz(self, file_path: str) -> str:
+    def _run_fitz(self, file_path: str, client_id: str = None, reporter: callable = None) -> str:
         """
         PyMuPDF Engine — Focus: High Performance.
         Iterates page-by-page, visiting every text operator in the PDF stream.
         """
         page_texts: list[str] = []
         with fitz.open(file_path) as doc:
+            num_pages = len(doc)
             for i, page in enumerate(doc, start=1):
+                prog_msg = f"PARSING: PyMuPDF processing page {i}/{num_pages}..."
+                logger.info(prog_msg)
+                if reporter:
+                    reporter(client_id, prog_msg)
+
                 text: str = page.get_text("text")
 
                 if text.strip():
                     page_texts.append(f"[Page {i}]\n{text}")
                 elif self.ocr_enabled:
                     # Fallback to OCR for scanned pages
+                    ocr_msg = f"OCR: Falling back to Tesseract for page {i}/{num_pages}..."
+                    logger.info(ocr_msg)
+                    if reporter:
+                        reporter(client_id, ocr_msg)
+                    
                     ocr_text = self._ocr_page_fitz(page)
                     if ocr_text.strip():
                         page_texts.append(f"[Page {i} (OCR)]\n{ocr_text}")
@@ -95,14 +108,20 @@ class PDFParser(BaseParser):
 
         return "\n\n".join(page_texts)
 
-    def _run_pdfplumber(self, file_path: str) -> str:
+    def _run_pdfplumber(self, file_path: str, client_id: str = None, reporter: callable = None) -> str:
         """
         pdfplumber Engine — Focus: Visual Precision.
         Best for documents with complex grid-based layouts or tables.
         """
         page_texts: list[str] = []
         with pdfplumber.open(file_path) as pdf:
+            num_pages = len(pdf.pages)
             for i, page in enumerate(pdf.pages, start=1):
+                prog_msg = f"PARSING: pdfplumber processing page {i}/{num_pages}..."
+                logger.info(prog_msg)
+                if reporter:
+                    reporter(client_id, prog_msg)
+
                 text: str | None = page.extract_text()
 
                 if text and text.strip():

@@ -128,6 +128,7 @@ async def parse_document(
     ocr: Optional[bool] = Form(False),     # Toggle for OCR-on-demand (Default to OFF for better UX)
     client_id: Optional[str] = Form(None),  # Unique frontend session tracking
     session_id: Optional[str] = Form(None), # Database session to link the document to
+    auto_chunk: bool = Form(True),         # Trigger default RAG chunking immediately
     db: DBSession = Depends(get_db)
 ):
     """
@@ -199,9 +200,9 @@ async def parse_document(
                 result["doc_id"] = db_doc.id
                 
                 # AUTO-CHUNKING (Direct View Flow)
-                # If we're not in Advanced mode (indicated by absence of client_id), 
-                # we immediately trigger the default Recursive chunking.
-                if extracted_text and not client_id:
+                # If auto_chunk is True, we immediately trigger the default Recursive chunking.
+                # Standard Chat users get RAG benefits without manual configuration.
+                if extracted_text and auto_chunk:
                     await send_log(request, client_id, "INFO: Auto-triggering default Recursive chunking...")
                     try:
                         chunk_url = f"{settings.ML_SERVICE_URL}/chunk"

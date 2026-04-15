@@ -45,21 +45,49 @@ precisely on the document type (Legal vs. Technical vs. Casual).
 
 logger = logging.getLogger(__name__)
 
+# ── Device Detection ─────────────────────────────────────────────────────────
+# Detected ONCE at import time and reused everywhere. Supports CUDA (NVIDIA),
+# MPS (Apple Silicon), and CPU as fallback.
+def _detect_device() -> str:
+    """Auto-selects the best available compute device."""
+    try:
+        import torch
+        if torch.cuda.is_available():
+            device = "cuda"
+            gpu_name = torch.cuda.get_device_name(0)
+            vram = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+            logger.info(f"[DEVICE] ✅ CUDA GPU detected: {gpu_name} ({vram:.1f} GB VRAM) — using GPU")
+        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            device = "mps"
+            logger.info("[DEVICE] ✅ Apple MPS detected — using MPS")
+        else:
+            device = "cpu"
+            logger.info("[DEVICE] ⚠️ No GPU detected — falling back to CPU")
+    except ImportError:
+        device = "cpu"
+        logger.warning("[DEVICE] torch not installed — defaulting to CPU")
+    return device
+
+COMPUTE_DEVICE: str = _detect_device()
+
+
 # Lightweight Embedding Wrapper for Semantic Chunking
 class LocalEmbeddings(Embeddings):
     """
     Minimalistic wrapper around SentenceTransformers to satisfy LangChain's 
     Embeddings interface without heavy dependencies.
+    Auto-uses CUDA/MPS if available, falls back to CPU otherwise.
     """
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
         from sentence_transformers import SentenceTransformer
-        self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(model_name, device=COMPUTE_DEVICE)
+        logger.info(f"[EMBEDDINGS] Loaded '{model_name}' on device: {COMPUTE_DEVICE}")
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        return self.model.encode(texts).tolist()
+        return self.model.encode(texts, device=COMPUTE_DEVICE).tolist()
 
     def embed_query(self, text: str) -> List[float]:
-        return self.model.encode([text])[0].tolist()
+        return self.model.encode([text], device=COMPUTE_DEVICE)[0].tolist()
 
 class ChunkerFactory:
     """

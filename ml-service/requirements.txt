@@ -14,15 +14,16 @@ Pillow>=10.2.0                   # High-performance image manipulation
 numpy>=1.26.4                    # Needed for image-to-matrix transforms
 
 # ── System Monitoring ──────────────────────────────────────────────────────
-psutil>=5.9.8                    # CPU and RAM monitoring
+psutil>=5.9.8                    # CPU, RAM, and GPU monitoring
 
 # ── RAG & CHUNKING ─────────────────────────────────────────────────────────
 chromadb>=0.4.24                 # Vector Database Client
 langchain-core>=0.1.0            # Core LangChain abstractions
 langchain-text-splitters>=0.0.1  # Core chunking logic
 langchain-experimental>=0.0.53   # For Semantic Chunking
-sentence-transformers>=2.5.1     # Embedding models (CPU)
+# NOTE: torch is installed BEFORE this file in the Dockerfile using the
+# CUDA-specific wheel (--index-url https://download.pytorch.org/whl/cu121)
+# so that sentence-transformers picks up the GPU-enabled version.
+sentence-transformers>=2.5.1     # Embedding models (GPU auto-detected at runtime)
 ragatouille>=0.0.8               # Late Interaction (ColBERT)
 rank-bm25>=0.2.2                 # Sparse Embeddings (BM25)
-
-

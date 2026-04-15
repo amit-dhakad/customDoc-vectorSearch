@@ -91,7 +91,8 @@ const AdvancedParsing = () => {
     formData.append('engine', engine);
     formData.append('ocr', useOcr.toString());
     formData.append('client_id', clientId);
-    formData.append('session_id', sessionId);  // ← KEY: links document to session in DB
+    formData.append('session_id', sessionId);
+    formData.append('auto_chunk', 'false'); // Advanced flow handles chunking manually in step 4
 
     try {
       const res = await api.parseDocument(formData);
@@ -140,9 +141,18 @@ const AdvancedParsing = () => {
     const lastLog = logs[logs.length - 1];
     return lastLog.replace(/^\[.*?\]\s*|^\w+:\s*/g, '');
   };
-
   // ── Navigate to the linked chat session ──────────────────────────────────
-  const handleStartChatting = () => {
+  const handleStartChatting = async () => {
+    try {
+      // Seed the session with a success message so the chat window doesn't look empty
+      await api.sendMessage(
+        sessionId,
+        'assistant',
+        `🚀 **Intelligence Configured!**\n\nThe document **${file?.name || 'Your file'}** has been indexed using **${chunkMethod}** segmentation and **${serverMethod || vectorMethod}** vectorization.\n\nI'm ready to answer any questions about its content.`
+      );
+    } catch (err) {
+      console.error('Failed to seed chat session:', err);
+    }
     navigate(`/chat/${sessionId}`);
   };
 
@@ -508,20 +518,20 @@ const AdvancedParsing = () => {
           </motion.div>
         )}
 
-        {/* ── Chunking overlay (shown over step 4 while chunking) ── */}
-        {chunking && (
+        {/* ── Building Intelligence Overlay (Step 4) ── */}
+        {step === 4 && chunking && (
           <motion.div
-            key="chunking-overlay"
+            key="step4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             style={{
               position: 'fixed', inset: 0,
-              background: 'rgba(var(--bg-rgb), 0.9)',
+              background: 'rgba(var(--bg-rgb), 0.92)',
               backdropFilter: 'blur(16px)',
               zIndex: 100,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              textAlign: 'center', gap: '24px',
+              textAlign: 'center', gap: '28px',
             }}
           >
             <div style={{ position: 'relative', width: '110px', height: '110px' }}>
@@ -543,37 +553,44 @@ const AdvancedParsing = () => {
             </div>
 
             <div>
-              <h3 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '10px' }}>Building Intelligence</h3>
-              <p style={{ color: 'var(--text-dim)', fontSize: '14px', maxWidth: '360px' }}>
+              <h3 style={{ fontSize: '24px', fontWeight: '800', marginBottom: '8px', letterSpacing: '-0.5px' }}>Building Intelligence</h3>
+              <p style={{ color: 'var(--text-dim)', fontSize: '15px', maxWidth: '380px', lineHeight: 1.6 }}>
                 Applying <strong style={{ color: 'var(--primary)' }}>{chunkMethod}</strong> segmentation
                 and indexing vectors into your document workspace…
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              {[0, 1, 2].map(i => (
-                <motion.div
-                  key={i}
-                  animate={{ y: [0, -10, 0], opacity: [0.4, 1, 0.4] }}
-                  transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.2, ease: 'easeInOut' }}
-                  style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--primary)' }}
-                />
-              ))}
+            {/* Live Log Terminal */}
+            <div style={{
+              width: '100%', maxWidth: '400px',
+              background: 'rgba(0,0,0,0.4)',
+              borderRadius: '16px',
+              border: '1px solid var(--border)',
+              padding: '24px',
+              textAlign: 'left',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: '12px',
+              maxHeight: '140px',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', animation: 'pulse 1.5s infinite' }} />
+                Neural Indexing Stream
+              </div>
+              <AnimatePresence mode="popLayout">
+                {logs.slice(-3).map((log, i) => (
+                  <motion.div
+                    key={log + i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1 - (2 - i) * 0.3, x: 0 }}
+                    style={{ color: i === logs.slice(-3).length - 1 ? 'var(--text)' : 'var(--text-dim)', marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {log.replace(/^\[.*?\]\s*/, '> ')}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
-
-            <motion.div
-              key={logs[logs.length - 1] || 'chunk-init'}
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              style={{
-                background: 'var(--glass)', padding: '8px 20px', borderRadius: '20px',
-                fontSize: '12px', fontWeight: '600', color: 'var(--primary)',
-                border: '1px solid var(--border)', maxWidth: '340px',
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-              }}
-            >
-              {logs[logs.length - 1]?.replace(/^\[.*?\]\s*|^\w+:\s*/g, '') || 'Segmenting…'}
-            </motion.div>
           </motion.div>
         )}
 

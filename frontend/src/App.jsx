@@ -35,7 +35,9 @@ import {
   ThumbsDown,
   Upload,
   Send,
-  Loader2
+  Loader2,
+  Cpu,
+  Zap,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from './api';
@@ -45,6 +47,87 @@ import './index.css';
 import ChatWindow from './components/ChatWindow';
 import AdvancedParsing from './components/AdvancedParsing';
 import InterviewPrep from './components/InterviewPrep';
+
+// ── Device Status Badge ───────────────────────────────────────────────────────────
+const DeviceBadge = () => {
+  const [stats, setStats] = useState(null);
+
+  const fetchStats = async () => {
+    try {
+      const res = await api.getSystemStats();
+      setStats(res.data);
+    } catch { /* backend unreachable */ }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 15000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!stats) return null;
+
+  const device = stats.device || 'cpu';
+  const gpu    = stats.gpu;
+  const isGpu  = device === 'cuda' || device === 'mps';
+
+  const color  = device === 'cuda' ? '#10b981'
+               : device === 'mps'  ? '#f59e0b'
+               : '#6b7280';
+
+  const label  = device === 'cuda' ? 'GPU'
+               : device === 'mps'  ? 'MPS'
+               : 'CPU';
+
+  return (
+    <div style={{
+      marginTop: '12px',
+      padding: '10px 12px',
+      borderRadius: '10px',
+      background: `${color}11`,
+      border: `1px solid ${color}33`,
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+    }}>
+      {/* Pulse dot */}
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        {isGpu && (
+          <div style={{
+            position: 'absolute', inset: '-3px',
+            borderRadius: '50%',
+            background: color,
+            opacity: 0.25,
+            animation: 'pulse 2s infinite',
+          }} />
+        )}
+        <div style={{
+          width: '8px', height: '8px',
+          borderRadius: '50%',
+          background: color,
+        }} />
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: '11px', fontWeight: '700', color, display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {isGpu ? <Zap size={11} /> : <Cpu size={11} />}
+          {label} Active
+        </div>
+        {gpu && (
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {gpu.name} · {gpu.vram_used_mb}MB / {gpu.vram_total_mb}MB
+          </div>
+        )}
+        {!gpu && device === 'cuda' && (
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>CUDA — VRAM loading…</div>
+        )}
+        {device === 'cpu' && (
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>CPU · {Math.round(stats.cpu)}% · {Math.round(stats.memory)}% RAM</div>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const Sidebar = ({ sessions, currentSession, onCreateSession, onDeleteSession }) => {
   return (
@@ -115,6 +198,7 @@ const Sidebar = ({ sessions, currentSession, onCreateSession, onDeleteSession })
           <Settings size={18} />
           Advanced Parsing
         </Link>
+        <DeviceBadge />
       </div>
     </aside>
   );

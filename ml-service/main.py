@@ -45,7 +45,7 @@ from app.core.parsers.pdf_parser import PDFParser
 from app.core.parsers.docx_parser import DocxParser
 from app.core.parsers.txt_parser import TxtParser
 from app.core.parsers.ocr_parser import OCRParser
-from app.core.chunking import get_chunks
+from app.core.chunking import get_chunks, COMPUTE_DEVICE
 
 # ── App Setup ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -85,12 +85,35 @@ def report_progress(client_id: str, message: str):
 async def get_system_stats():
     """
     Performance Telemetry.
-    Returns real-time CPU and RAM percentage to help users monitor OCR-heavy workloads.
+    Returns real-time CPU, RAM, and GPU stats to help users monitor workloads.
+    The 'device' field tells the frontend which compute backend is active.
     """
-    return {
+    stats = {
         "cpu": psutil.cpu_percent(interval=None),
-        "memory": psutil.virtual_memory().percent
+        "memory": psutil.virtual_memory().percent,
+        "device": COMPUTE_DEVICE,
+        "gpu": None,
     }
+
+    # Attempt to read live GPU stats if CUDA is active
+    if COMPUTE_DEVICE == "cuda":
+        try:
+            import torch
+            gpu_props = torch.cuda.get_device_properties(0)
+            allocated_mb  = torch.cuda.memory_allocated(0) / (1024 ** 2)
+            reserved_mb   = torch.cuda.memory_reserved(0)  / (1024 ** 2)
+            total_mb      = gpu_props.total_memory          / (1024 ** 2)
+            stats["gpu"] = {
+                "name":         gpu_props.name,
+                "vram_total_mb": round(total_mb),
+                "vram_used_mb":  round(reserved_mb),
+                "vram_free_mb":  round(total_mb - reserved_mb),
+                "utilization":   round((reserved_mb / total_mb) * 100, 1),
+            }
+        except Exception as e:
+            stats["gpu"] = {"error": str(e)}
+
+    return stats
 
 # ── Factory Pattern: Parser Selection ──────────────────────────────────────
 

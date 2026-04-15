@@ -36,19 +36,30 @@ const ThinkingBubble = ({ modelLabel }) => (
       <Bot size={16} color="var(--primary)" />
     </div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         {[0, 1, 2].map(i => (
           <motion.div
             key={i}
-            animate={{ y: [0, -6, 0], opacity: [0.4, 1, 0.4] }}
-            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
-            style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--primary)' }}
+            animate={{ 
+              scale: [1, 1.3, 1],
+              opacity: [0.3, 1, 0.3],
+            }}
+            transition={{ 
+              duration: 1.2, 
+              repeat: Infinity, 
+              delay: i * 0.2, 
+              ease: 'easeInOut' 
+            }}
+            style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)' }}
           />
         ))}
+        <span style={{ fontSize: '12px', color: 'var(--text-dim)', fontWeight: '600', letterSpacing: '0.2px' }}>
+          {modelLabel} is processing…
+        </span>
       </div>
-      <span style={{ fontSize: '11px', color: 'var(--text-dim)', fontWeight: '500' }}>
-        {modelLabel} is thinking…
-      </span>
+      <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', opacity: 0.8 }}>
+        Retrieving facts and generating insight
+      </div>
     </div>
   </motion.div>
 );
@@ -94,31 +105,42 @@ const UploadOverlay = ({ logs }) => (
       </div>
     </div>
 
-    <h3 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '8px' }}>Parsing Document</h3>
-    <p style={{ color: 'var(--text-dim)', fontSize: '14px', maxWidth: '300px', marginBottom: '24px' }}>
-      Extracting intelligence from your file…
+    <h3 style={{ fontSize: '22px', fontWeight: '800', marginBottom: '8px', letterSpacing: '-0.5px' }}>Analyzing Intelligence</h3>
+    <p style={{ color: 'var(--text-dim)', fontSize: '15px', maxWidth: '340px', marginBottom: '32px', lineHeight: 1.5 }}>
+      Extracting semantic structure and indexing vectors for RAG retrieval.
     </p>
 
-    <motion.div
-      key={logs[logs.length - 1] || 'init'}
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      style={{
-        background: 'var(--glass)', padding: '10px 22px', borderRadius: '20px',
-        fontSize: '12px', fontWeight: '600', color: 'var(--primary)',
-        display: 'flex', alignItems: 'center', gap: '8px',
-        border: '1px solid var(--border)', maxWidth: '320px',
-      }}
-    >
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
-        style={{ width: '12px', height: '12px', borderRadius: '50%', border: '2px solid var(--primary)', borderTopColor: 'transparent', flexShrink: 0 }}
-      />
-      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {logs[logs.length - 1]?.replace(/^\[.*?\]\s*|^\w+:\s*/g, '') || 'Preparing…'}
-      </span>
-    </motion.div>
+    {/* Live Log Terminal */}
+    <div style={{
+      width: '100%', maxWidth: '400px',
+      background: 'rgba(0,0,0,0.4)',
+      borderRadius: '16px',
+      border: '1px solid var(--border)',
+      padding: '20px',
+      textAlign: 'left',
+      fontFamily: 'JetBrains Mono, monospace',
+      fontSize: '12px',
+      maxHeight: '120px',
+      overflow: 'hidden',
+      position: 'relative'
+    }}>
+      <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--primary)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', animation: 'pulse 1.5s infinite' }} />
+        Pipeline Stream
+      </div>
+      <AnimatePresence mode="popLayout">
+        {logs.slice(-3).map((log, i) => (
+          <motion.div
+            key={log + i}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1 - (2 - i) * 0.3, x: 0 }}
+            style={{ color: i === logs.slice(-3).length - 1 ? 'var(--text)' : 'var(--text-dim)', marginBottom: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {log.replace(/^\[.*?\]\s*/, '> ')}
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
   </motion.div>
 );
 
@@ -369,6 +391,7 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
       setLogs(['Initializing parsing pipeline…']);
       formData.append('session_id', sessionId);
       formData.append('client_id', clientId);
+      formData.append('auto_chunk', 'true'); // Ensure background vectorization for RAG
       await api.parseDocument(formData);
       await api.sendMessage(
         sessionId, 'assistant',
@@ -429,7 +452,12 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '32px 20px' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
-            {messages.length === 0 ? (
+            {/* 
+              Show WelcomeState ONLY if there are no messages AND no documents yet.
+              If documents exist but no messages (rarely happens now due to seeding), 
+              we still allow the chat interface to show so the user can just start typing.
+            */}
+            {messages.length === 0 && documents.length === 0 ? (
               <WelcomeState onUpload={() => fileInputRef.current?.click()} />
             ) : (
               <AnimatePresence initial={false}>

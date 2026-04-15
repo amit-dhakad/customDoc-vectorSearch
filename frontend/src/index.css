@@ -184,6 +184,13 @@ body {
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.2);
 }
 
+.card-interactive.active {
+  border-color: var(--primary) !important;
+  background: rgba(99, 102, 241, 0.1) !important;
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+  transform: translateY(-4px);
+}
+
 .success-badge {
   background: rgba(16, 185, 129, 0.1);
   border: 1px solid var(--accent);

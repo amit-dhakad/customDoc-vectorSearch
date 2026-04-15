@@ -1,3 +1,25 @@
+/**
+ * App.jsx — THE SINGLE-PAGE APPLICATION (SPA) HEART.
+ * 
+ * DESIGN ARCHITECTURE:
+ * ─────────────────────────────────────────────────────────────────────────────
+ * This is the root of the React application. It manages the global routing 
+ * (via react-router-dom) and the top-level workspace state (Sessions).
+ * 
+ * CORE RESPONSIBILITIES:
+ * ──────────────────────────────────────────────────────────────
+ * 1. WORKSPACE STATE: Fetches and maintains the list of active chat sessions.
+ * 2. ROUTING: Orchestrates transitions between 'Chat View', 'Advanced Parsing', 
+ *    and the 'Welcome Screen'.
+ * 3. GLOBAL LOADING: Handles the initial application hydration state.
+ * 
+ * THE "MODULAR SHELL" PATTERN:
+ * ──────────────────────────────────────────────────────────────
+ * Instead of duplicating the Sidebar in every view, we use a `MainLayout` shell.
+ * This ensures that navigation remains consistent while only the 'content' area 
+ * swaps out, reducing re-renders and improving the "Glassmorphism" UI fluidity.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useParams, Link } from 'react-router-dom';
 import { 
@@ -22,6 +44,7 @@ import './index.css';
 // Components
 import ChatWindow from './components/ChatWindow';
 import AdvancedParsing from './components/AdvancedParsing';
+import InterviewPrep from './components/InterviewPrep';
 
 const Sidebar = ({ sessions, currentSession, onCreateSession, onDeleteSession }) => {
   return (
@@ -151,6 +174,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/chat/:sessionId" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><ChatWindow sessions={sessions} onRefreshSessions={fetchSessions} /></MainLayout>} />
         <Route path="/advanced" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><AdvancedParsing /></MainLayout>} />
+        <Route path="/interview" element={<InterviewPrep />} />
         <Route path="/" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><WelcomeView onStart={handleCreateSession}/></MainLayout>} />
       </Routes>
     </div>

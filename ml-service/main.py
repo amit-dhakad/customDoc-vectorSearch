@@ -1,23 +1,35 @@
 """
-ml-service/main.py — FastAPI Gateway & Extraction Orchestrator.
+ml-service/main.py — Intelligence Extraction & Vectorization Gateway.
 
-ARCHITECTURE OVERVIEW
+CORE MISSION
 ─────────────────────────────────────────────────────────────────────────────
-This is the primary entry point for the Machine Learning Extraction microservice.
-It receives raw files, identifies the correct extraction strategy, and executes it.
+This service acts as the "Heavy Lifter" for the RAG pipeline. It handles the 
+high-compute tasks of Parsing (PDF/OCR), Segmenting (Chunking), and 
+Inteligent Vectorization (Dense/Sparse/Hybrid/ColBERT).
 
-Why a Separate Service?
-  Parsing large PDFs and running OCR are highly CPU-intensive, blocking tasks.
-  By isolating them in a separate service:
-  1. The main Backend API remains free to serve other user requests.
-  2. We can scale the ML service independently under heavy load.
+PIPELINE STAGES:
+────────────────────────────────────────────────────
+1. EXTRACTION: Raw binary files go in -> Text & Metadata comes out.
+   - Fast Path: PyMuPDF (fitz) for standard PDFs.
+   - Accurate Path: pdfplumber for complex layouts.
+   - Visual Path: Tesseract OCR for scanned images/PDFs.
 
-INTERNAL COMMUNICATION BRIDGE
-─────────────────────────────────────────────────────────────────────────────
-Because extraction can take seconds or minutes, this service must report 
-progress back to the user. It does this via synchronous HTTP calls to an 
-internal Backend reporting endpoint (`report_progress`), which the Backend 
-then relays to the frontend via WebSockets.
+2. INTELLIGENCE: Text is transformed into "Knowledge Units".
+   - Multi-Strategy Chunking: Ensures semantic boundaries are respected.
+   - High-Precision Vectorization: Maps text to mathematical space for search.
+   - Strategy Choice: Users can optimize for speed (Dense) or accuracy (ColBERT).
+
+3. PERSISTENCE: 
+   - Fragments are pushed to ChromaDB for sub-millisecond similarity search.
+   - Feedback is streamed back to the frontend via the Backend reporting bridge.
+
+WHY THIS ARCHITECTURE WINS:
+──────────────────────────
+By decoupling the Intelligence Pipeline from the Main API, we ensure that:
+- Long-running OCR tasks don't block the UI or the Chat engine.
+- Processing can be scaled vertically (more CPU/RAM) or horizontally (more workers).
+- We provide a "Professional Grade" ingestion engine that outperforms simple 
+  LangChain wrappers by allowing granular control over every step.
 """
 from fastapi import FastAPI, UploadFile, File, Query, HTTPException
 import os
@@ -25,6 +37,7 @@ import shutil
 import logging
 import httpx
 import psutil
+from pydantic import BaseModel
 from typing import Literal, Optional
 
 # ── Dynamic Import of Engine Implementations ───────────────────────────────
@@ -32,6 +45,7 @@ from app.core.parsers.pdf_parser import PDFParser
 from app.core.parsers.docx_parser import DocxParser
 from app.core.parsers.txt_parser import TxtParser
 from app.core.parsers.ocr_parser import OCRParser
+from app.core.chunking import get_chunks
 
 # ── App Setup ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -100,6 +114,24 @@ def get_parser_by_extension(filename: str):
             detail=f"Unsupported file format: {ext}"
         )
 
+# ── Pydantic Request Models ───────────────────────────────
+class ChunkRequest(BaseModel):
+    """Encapsulates document text and segmentation strategy."""
+    text: str
+    method: Literal["fixed", "overlap", "recursive", "structural", "semantic"] = "recursive"
+    vector_method: Literal["dense", "sparse", "hybrid", "colbert"] = "dense"
+    chunk_size: int = 1000
+    overlap: int = 200
+    collection_name: Optional[str] = None
+    client_id: Optional[str] = None
+
+class RetrieveRequest(BaseModel):
+    """Request schema for context retrieval."""
+    collection_name: str
+    query: str
+    n_results: int = 4
+
+
 # ── Endpoints ──────────────────────────────────────────────────────────────
 
 @app.post("/parse", tags=["Parsing"])
@@ -126,11 +158,26 @@ async def parse_document(
     
     try:
         # 1. Buffered Input: Save raw binary to local disk for parser access
+        contents = await file.read()
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            buffer.write(contents)
         
         # 2. Engine Routing: Determine if we use standard text extraction or OCR
-        if use_ocr or os.path.splitext(file.filename)[1].lower() in [".png", ".jpg", ".jpeg", ".tiff"]:
+        ext = os.path.splitext(file.filename)[1].lower()
+        is_image = ext in [".png", ".jpg", ".jpeg", ".tiff"]
+        is_pdf = ext == ".pdf"
+
+        if use_ocr:
+            if is_pdf or is_image:
+                parser = OCRParser()
+            else:
+                # User requested OCR but format doesn't support it
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"OCR is not supported for {ext} files. Please use standard parsing."
+                )
+        elif is_image:
+            # Auto-routing for images even if ocr=False, as images require OCR
             parser = OCRParser()
         else:
             parser = get_parser_by_extension(file.filename)
@@ -159,6 +206,58 @@ async def parse_document(
         # 4. Storage Management: Delete buffered file to prevent disk exhaustion
         if os.path.exists(file_path):
             os.remove(file_path)
+
+@app.post("/chunk", tags=["RAG"])
+async def chunk_text(request: ChunkRequest):
+    """
+    Segmentation & Intelligence Pipeline.
+    1. Receives raw text in JSON body.
+    2. Segments text using the selected strategy.
+    3. Vectorizes using Dense, Sparse, Hybrid, or Late Interaction (ColBERT).
+    4. Returns list of intelligent chunks.
+    """
+    try:
+        if request.client_id:
+            report_progress(request.client_id, f"INFO: Starting {request.method.upper()} chunking with {request.vector_method.upper()} vectorization...")
+            
+        chunks = get_chunks(
+            request.text, 
+            request.method, 
+            request.vector_method, 
+            request.chunk_size, 
+            request.overlap, 
+            request.collection_name
+        )
+        
+        if request.client_id:
+            report_progress(request.client_id, f"SUCCESS: Generated {len(chunks)} fragments.")
+            
+        return {
+            "method": request.method,
+            "vector_method": request.vector_method,
+            "chunk_count": len(chunks),
+            "chunks": chunks,
+            "status": "success"
+        }
+    except Exception as e:
+        logger.error(f"Chunking failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/retrieve", tags=["RAG"])
+async def retrieve_context(request: RetrieveRequest):
+    """
+    Retrieval Endpoint.
+    Searches ChromaDB for relevant text fragments.
+    """
+    try:
+        from app.core.chunking import VectorManager
+        vm = VectorManager()
+        context = vm.retrieve_context(request.collection_name, request.query, request.n_results)
+        return {"context": context, "status": "success"}
+    except Exception as e:
+        logger.error(f"Retrieval failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/", tags=["Health"])
 def health():

@@ -49,12 +49,22 @@ class Session(Base):
 
 class Document(Base):
     """
-    Stores metadata for files uploaded to a specific session.
+    RAG Metadata Repository: The Source Document Model.
     
-    Attributes:
-        session_id (str): Foreign key linking back to the parent Session.
-        filename (str): Original name of the uploaded file.
-        file_type (str): Extension/MIME type (e.g., pdf, docx).
+    PURPOSE:
+    ─────────────────────────────────────────────
+    This model acts as the relational 'Master Record' for every uploaded file.
+    While the high-dimensional vectors are stored in ChromaDB, the critical 
+    file metadata and ownership reside here in the SQL layer.
+
+    WHY DUAL PERSISTENCE?
+    ─────────────────────────────────────────────
+    1. RELATIONAL INTEGRITY: We use SQLite to maintain strict relationships 
+       between Users, Sessions, and Documents using Foreign Keys.
+    2. SCALABILITY: We offload the heavy text fragments to the 'chunks' table, 
+       allowing the master Document table to remain lightweight and searchable.
+    3. RECOVERY: Storing the raw chunk text in SQL acts as a backup and 
+       allows for audit-logging and UI previews without hitting the Vector DB.
     """
     __tablename__ = "documents"
 
@@ -62,10 +72,46 @@ class Document(Base):
     session_id = Column(String, ForeignKey("sessions.id"))
     filename = Column(String)
     file_type = Column(String, nullable=True)
+    raw_content = Column(Text, nullable=True) # Persistent storage for extracted data
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # back_populates links this to the 'documents' list in the Session model.
     session = relationship("Session", back_populates="documents")
+    chunks = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
+
+class Chunk(Base):
+    """
+    The Intelligence Fragment: Relational Text Segmentation.
+    
+    WHAT THIS IS:
+    ─────────────────────────────────────────────
+    A 'Chunk' is a semantically meaningful slice of a document. If a PDF is a 
+    book, a Chunk is a logical page or paragraph.
+
+    HOW IT WORKS:
+    ─────────────────────────────────────────────
+    1. SEGMENTATION: Generated during the Intelligence Pipeline (Step 3/4).
+    2. INDEXING: Every row here has a corresponding 384-dimensional vector in 
+       ChromaDB.
+    3. RETRIEVAL: During a chat, we search ChromaDB for the best vectors, then 
+       map them back to these SQL records to serve the text to the LLM.
+
+    WHY THIS MODEL IS BEST:
+    ─────────────────────────────────────────────
+    - SEQUENTIAL AWARENESS: The 'index' column allows us to retrieve 'neighbor' 
+      chunks (surrounding context), which is a key advanced RAG technique.
+    - PERFORMANCE: Indexed ForeignKey lookups ensure that even with millions 
+      of chunks, metadata retrieval remains O(log n).
+    """
+    __tablename__ = "chunks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_id = Column(Integer, ForeignKey("documents.id"))
+    content = Column(Text)
+    index = Column(Integer)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    document = relationship("Document", back_populates="chunks")
 
 class Message(Base):
     """

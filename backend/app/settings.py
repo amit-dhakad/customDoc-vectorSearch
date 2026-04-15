@@ -2,11 +2,24 @@ from pydantic_settings import BaseSettings
 import os
 
 """
-Application Configuration
--------------------------
-Centralized settings management using Pydantic Settings. 
-This allows the application to read configuration from environment 
-variables with automatic type conversion and validation.
+backend/app/settings.py — Global Configuration Framework.
+
+PURPOSE:
+─────────────────────────────────────────────────────────────────────────────
+This module serves as the 'Single Source of Truth' for all application 
+variables. Using Pydantic Settings allows us to manage complex distributed 
+architectures (FastAPI + ML Service + ChromaDB) with absolute type safety.
+
+WHY THIS ARCHITECTURE IS BEST:
+────────────────────────────────────────────────────
+1. 12-FACTOR APP COMPLIANCE: By reading from environment variables first, 
+   this setup is cloud-native and behaves perfectly inside Docker containers.
+2. AUTOMATIC VALIDATION: If `CHROMA_PORT` is not an integer, the application 
+   will fail to boot immediately with a clear error, rather than crashing 
+   silently during a vector search.
+3. ADAPTABILITY: Easily toggle between 'Localhost' development and 
+   'Docker-Network' production by simply changing environment variables 
+   without touching a single line of logic code.
 """
 
 class Settings(BaseSettings):
@@ -21,6 +34,14 @@ class Settings(BaseSettings):
     # Points to the extraction microservice. In the Docker Compose environment, 
     # 'ml-service' resolves to the container's internal IP via Docker DNS.
     ML_SERVICE_URL: str = os.getenv("ML_SERVICE_URL", "http://ml-service:8000")
+    CHROMA_HOST: str = os.getenv("CHROMA_HOST", "chromadb")
+    CHROMA_PORT: int = int(os.getenv("CHROMA_PORT", 8000))
+    
+    # OLLAMA CONFIGURATION:
+    # Points to the host machine's Ollama instance.
+    OLLAMA_URL: str = os.getenv("OLLAMA_URL", "http://host.docker.internal:11434")
+    OLLAMA_MODEL: str = os.getenv("OLLAMA_MODEL", "llama3")
+
     
     # UPLOAD_DIR:
     # Persistent storage path for incoming documents before processing.

@@ -68,6 +68,8 @@ class OCRParser(BaseParser):
             return extracted_text
         except Exception as e:
             logger.error("OCRParser: OCR failed for image %s: %s", file_path, e)
+            if "cannot identify image file" in str(e):
+                raise RuntimeError(f"OCR ERROR: The file '{os.path.basename(file_path)}' is not a valid image or is corrupted.")
             raise RuntimeError(f"Image OCR failed: {e}")
 
     def _run_scanned_pdf_ocr(self, file_path: str, dpi: int, client_id: str = None, reporter: callable = None) -> str:

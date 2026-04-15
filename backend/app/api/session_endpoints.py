@@ -7,10 +7,29 @@ from ..database import get_db
 from .. import models, schemas
 
 """
-Session & Chat Management
--------------------------
-Handles the lifecycle of chat sessions, message persistence, 
-document associations, and user feedback.
+backend/app/api/session_endpoints.py — RAG State & Workspace Management.
+
+THE ANCHOR PHILOSOPHY:
+─────────────────────────────────────────────────────────────────────────────
+In this application, a 'Session' is more than a chat history. It is a 
+logical workspace that anchors specific Documents, Chunks, and Vectors.
+
+WHY THIS IS CRITICAL:
+────────────────────────────────────────────────────
+1. CONTEXT ISOLATION: By linking Documents and Vectors to a session_id, we ensure 
+   that when you search your "Legal Doc" session, the AI doesn't hallucinate 
+   using data from your "Tech Manual" session.
+2. PERSISTENCE: Every message and file relationship is serialized to SQLite, 
+   allowing for a persistent, multi-modal 'workspace' memory.
+3. VECTOR MAPPING: The session_id serves as the ChromaDB collection name, 
+   allowing for isolated, high-speed vector retrieval.
+
+HOW IT BEST SERVES THE USER:
+───────────────────────────
+- WORKSPACE MEMORY: Users can return to a session months later and the AI still 
+  possesses the "Intelligence" of the documents uploaded to that space.
+- SCALABLE HISTORY: Uses SQLAlchemy lazy-loading to handle thousands of messages 
+  without significantly increasing memory pressure on the API.
 """
 
 router = APIRouter()
@@ -102,3 +121,44 @@ def submit_feedback(feedback: schemas.FeedbackCreate, db: Session = Depends(get_
     db.commit()
     db.refresh(db_feedback)
     return db_feedback
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str, db: Session = Depends(get_db)):
+    db.query(models.Session).filter(models.Session.id == session_id).delete()
+    db.commit()
+    return {"status": "deleted"}
+
+@router.post("/sessions/{session_id}/ask")
+async def ask_question(session_id: str, message: schemas.MessageCreate, db: Session = Depends(get_db)):
+    """
+    Primary RAG Entry Point.
+    1. Saves the user question to the database.
+    2. Orchestrates context retrieval and LLM generation via RAGService.
+    3. Saves the AI response to the database.
+    4. Returns the final answer.
+    """
+    # 1. Store User Message
+    user_db_msg = models.Message(
+        session_id=session_id,
+        role="user",
+        content=message.content
+    )
+    db.add(user_db_msg)
+    db.commit()
+
+    # 2. Trigger RAG Pipeline
+    from app.services.rag_service import RAGService
+    rag = RAGService()
+    answer = await rag.generate_rag_answer(session_id, message.content, model=message.model)
+
+    # 3. Store AI Response
+    ai_db_msg = models.Message(
+        session_id=session_id,
+        role="assistant",
+        content=answer
+    )
+    db.add(ai_db_msg)
+    db.commit()
+    db.refresh(ai_db_msg)
+
+    return ai_db_msg

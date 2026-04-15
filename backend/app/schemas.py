@@ -22,6 +22,14 @@ Pydantic is the enforcement engine. When the frontend sends a JSON payload:
 Using `from_attributes = True` inside the nested `Config` classes instructs 
 Pydantic that it is allowed to construct itself using complex Objects rather 
 than simple dictionaries, easing the serialization process.
+
+NEW INTELLIGENCE SCHEMAS (Chunking Phase)
+─────────────────────────────────────────────────────────────────────────────
+With the addition of the Intelligence Pipeline, we now have `Chunk` schemas.
+These are critical for:
+  1. PREVIEW: Allowing the UI to display segmented text with original indexes.
+  2. METADATA: Each chunk schema carries the relationship to its parent Document,
+     ensuring the frontend can correctly map vectors back to source files.
 """
 
 # --- Document Schemas ---
@@ -40,10 +48,31 @@ class Document(DocumentBase):
     id: int
     session_id: str
     created_at: datetime
+    chunks: List["Chunk"] = []
 
     class Config:
         # from_attributes=True (formerly orm_mode) allows Pydantic to read data 
         # directly from SQLAlchemy model instances (objects) even if they aren't dicts.
+        from_attributes = True
+
+# --- Chunk Schemas ---
+
+class ChunkBase(BaseModel):
+    """Core chunk attributes."""
+    content: str
+    index: int
+
+class ChunkCreate(ChunkBase):
+    """Used for bulk insertion of chunks."""
+    document_id: int
+
+class Chunk(ChunkBase):
+    """Full chunk record."""
+    id: int
+    document_id: int
+    created_at: datetime
+
+    class Config:
         from_attributes = True
 
 # --- Message Schemas ---
@@ -55,7 +84,7 @@ class MessageBase(BaseModel):
 
 class MessageCreate(MessageBase):
     """Used for sending new messages from the client."""
-    pass
+    model: Optional[str] = None  # e.g. 'llama3' or 'gemma'
 
 class Message(MessageBase):
     """Serialized message with unique identifier and server-side timestamp."""

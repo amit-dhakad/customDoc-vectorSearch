@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Dict, Any, Literal
 
 """
 backend/app/schemas.py — Pydantic Data Transfer Objects (DTO)
@@ -86,7 +86,9 @@ class MessageCreate(MessageBase):
     """Used for sending new messages from the client."""
     model: Optional[str] = None  # e.g. 'llama3' or 'gemma'
     search_type: Optional[Literal["dense", "hybrid"]] = "hybrid"
+    n_results: Optional[int] = 4
     enable_reranking: Optional[bool] = True
+    enable_hyde: Optional[bool] = False
 
 class Message(MessageBase):
     """Serialized message with unique identifier and server-side timestamp."""

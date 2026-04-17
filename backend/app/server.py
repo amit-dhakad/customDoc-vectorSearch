@@ -1,6 +1,11 @@
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from app.api.endpoints import router as api_router
+from app.api.session_endpoints import router as session_router
+from app.api.metrics_endpoints import router as metrics_router
+from app.settings import settings
+from typing import Dict, List
 import logging
 import time
 import sys

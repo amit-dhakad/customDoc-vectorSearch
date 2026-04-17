@@ -28,6 +28,7 @@ sentence-transformers>=2.5.1     # Embedding models (GPU auto-detected at runtim
 ragatouille>=0.0.8               # Late Interaction (ColBERT)
 rank-bm25>=0.2.2                 # Sparse Embeddings (BM25)
 ragas>=0.1.7                     # RAG Evaluation Framework
+datasets>=2.18.0                 # Needed for RAGAS evaluation sets
 pandas>=2.2.0                    # Data manipulation for RAGAS
 langchain-openai>=0.1.0           # OpenAI Critic for RAGAS
 langchain-community>=0.0.30       # Ollama integration via LangChain

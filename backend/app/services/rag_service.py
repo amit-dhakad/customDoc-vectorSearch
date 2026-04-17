@@ -32,7 +32,9 @@ class RAGService:
         query: str, 
         model: Optional[str] = None,
         search_type: str = "hybrid",
-        rerank: bool = True
+        n_results: int = 4,
+        rerank: bool = True,
+        enable_hyde: bool = False
     ) -> Dict[str, Any]:
         """
         Executes the full RAG cycle.
@@ -51,13 +53,34 @@ class RAGService:
         }
 
         try:
+            # 0. HYDE PHASE: Generate a hypothetical answer to improve retrieval semantic matching
+            retrieval_query = query
+            if enable_hyde:
+                try:
+                    logger.info("RAG: [HyDE] Generating hypothetical intent...")
+                    hyde_url = f"{settings.OLLAMA_URL}/api/generate"
+                    hyde_prompt = f"Please write a short, scientific, and concise passage answering this specific question: {query}"
+                    hyde_payload = {
+                        "model": active_model,
+                        "prompt": hyde_prompt,
+                        "stream": False,
+                        "options": {"num_predict": 100} # Keep it short for speed
+                    }
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        h_resp = await client.post(hyde_url, json=hyde_payload)
+                        if h_resp.status_code == 200:
+                            retrieval_query = h_resp.json().get("response", query)
+                            logger.info("RAG: [HyDE] Using synthetic answer for search expansion.")
+                except Exception as e:
+                    logger.warning(f"RAG: [HyDE] Failed, falling back to original query: {e}")
+
             # 1. RETRIEVAL PHASE: Get context from the session's vector collection
             retrieval_start = time.perf_counter()
             retrieve_url = f"{self.ml_service_url}/retrieve"
             retrieve_payload = {
                 "collection_name": session_id,
-                "query": query,
-                "n_results": 4,
+                "query": retrieval_query,
+                "n_results": n_results,
                 "search_type": search_type,
                 "rerank": rerank
             }

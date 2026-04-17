@@ -31,14 +31,16 @@ export const api = {
   // Chat messages
   getMessages: (sessionId) => axios.get(`${API_BASE_URL}/sessions/${sessionId}/messages`),
   sendMessage: (sessionId, role, content) => axios.post(`${API_BASE_URL}/sessions/${sessionId}/messages`, { role, content }),
-  askQuestion: (sessionId, content, model = null, searchType = 'hybrid', rerank = true) => 
-    axios.post(`${API_BASE_URL}/sessions/${sessionId}/ask`, { 
-      role: 'user', 
-      content, 
-      model,
-      search_type: searchType,
-      enable_reranking: rerank
-    }),
+  async askQuestion(sessionId, query, model, searchType, nResults, rerank, hyde) {
+      return axios.post(`${API_BASE_URL}/sessions/${sessionId}/ask`, {
+          content: query,
+          model,
+          search_type: searchType,
+          n_results: nResults,
+          enable_reranking: rerank,
+          enable_hyde: hyde
+      });
+  },
   getDocuments: (sessionId) => axios.get(`${API_BASE_URL}/sessions/${sessionId}/documents`),
   
   // Feedback

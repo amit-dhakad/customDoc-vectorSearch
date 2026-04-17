@@ -255,7 +255,7 @@ const ModelSelector = ({ selectedModel, onModelChange, models, loadingModels, on
   );
 };
 
-const SearchTuning = ({ searchType, setSearchType, rerankEnabled, setRerankEnabled }) => {
+const SearchTuning = ({ searchType, setSearchType, rerankEnabled, setRerankEnabled, nResults, setNResults, hydeEnabled, setHydeEnabled }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
@@ -273,7 +273,7 @@ const SearchTuning = ({ searchType, setSearchType, rerankEnabled, setRerankEnabl
         style={{
           display: 'flex', alignItems: 'center', gap: '8px',
           padding: '8px 14px', borderRadius: '10px', fontSize: '13px',
-          fontWeight: '500', color: searchType === 'hybrid' || rerankEnabled ? 'var(--primary)' : 'var(--text)',
+          fontWeight: '500', color: searchType === 'hybrid' || rerankEnabled || hydeEnabled ? 'var(--primary)' : 'var(--text)',
           border: '1px solid var(--border)', cursor: 'pointer',
         }}
       >
@@ -289,50 +289,85 @@ const SearchTuning = ({ searchType, setSearchType, rerankEnabled, setRerankEnabl
             exit={{ opacity: 0, y: -6, scale: 0.97 }}
             style={{
               position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-              minWidth: '240px', background: 'var(--bg)',
+              minWidth: '280px', background: 'var(--bg)',
               border: '1px solid var(--border)', borderRadius: '14px',
-              padding: '12px', boxShadow: '0 16px 40px rgba(0,0,0,0.25)', zIndex: 50,
+              padding: '16px', boxShadow: '0 16px 40px rgba(0,0,0,0.25)', zIndex: 50,
             }}
           >
-            <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
-              Advanced Retrieval Strategies
+            <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '16px' }}>
+                Retrieval Intelligence
             </div>
             
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {/* Hybrid Toggle */}
               <div 
                 onClick={() => setSearchType(searchType === 'dense' ? 'hybrid' : 'dense')}
                 className="glass-effect"
                 style={{
-                  padding: '10px', borderRadius: '10px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  background: searchType === 'hybrid' ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
+                  padding: '12px', borderRadius: '12px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: searchType === 'hybrid' ? 'rgba(99, 102, 241, 0.1)' : 'transparent',
                   borderColor: searchType === 'hybrid' ? 'var(--primary)' : 'var(--border)'
                 }}
               >
                 <Search size={16} color={searchType === 'hybrid' ? 'var(--primary)' : 'var(--text-dim)'} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600' }}>Hybrid Search</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Semantic + Keyword (BM25)</div>
+                  <div style={{ fontSize: '13px', fontWeight: '700' }}>Hybrid Search</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>Dense + BM25</div>
                 </div>
                 <div style={{ width: '12px', height: '12px', border: '2px solid var(--primary)', borderRadius: '50%', background: searchType === 'hybrid' ? 'var(--primary)' : 'transparent' }} />
               </div>
 
+              {/* HyDE Toggle */}
+              <div 
+                onClick={() => setHydeEnabled(!hydeEnabled)}
+                className="glass-effect"
+                style={{
+                  padding: '12px', borderRadius: '12px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: hydeEnabled ? 'rgba(245, 158, 11, 0.1)' : 'transparent',
+                  borderColor: hydeEnabled ? '#f59e0b' : 'var(--border)'
+                }}
+              >
+                <Zap size={16} color={hydeEnabled ? '#f59e0b' : 'var(--text-dim)'} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '700' }}>Synthetic Search (HyDE)</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>Hypothetical answer expansion</div>
+                </div>
+                <div style={{ width: '12px', height: '12px', border: '2px solid #f59e0b', borderRadius: '50%', background: hydeEnabled ? '#f59e0b' : 'transparent' }} />
+              </div>
+
+              {/* Reranking Toggle */}
               <div 
                 onClick={() => setRerankEnabled(!rerankEnabled)}
                 className="glass-effect"
                 style={{
-                  padding: '10px', borderRadius: '10px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '12px', borderRadius: '12px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '12px',
                   background: rerankEnabled ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
                   borderColor: rerankEnabled ? '#10b981' : 'var(--border)'
                 }}
               >
                 <Sparkles size={16} color={rerankEnabled ? '#10b981' : 'var(--text-dim)'} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '600' }}>AI Reranking</div>
-                  <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Cross-Encoder verification</div>
+                  <div style={{ fontSize: '13px', fontWeight: '700' }}>AI Reranking</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>Cross-Encoder precision</div>
                 </div>
                 <div style={{ width: '12px', height: '12px', border: '2px solid #10b981', borderRadius: '50%', background: rerankEnabled ? '#10b981' : 'transparent' }} />
+              </div>
+
+              {/* Top-K Slider */}
+              <div className="glass-effect" style={{ padding: '16px', borderRadius: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase' }}>Context Depth (Top-K)</span>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)' }}>{nResults} Chunks</span>
+                </div>
+                <input 
+                    type="range" min="1" max="10" 
+                    value={nResults} 
+                    onChange={(e) => setNResults(parseInt(e.target.value))}
+                    style={{ width: '100%', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                />
               </div>
             </div>
           </motion.div>
@@ -341,6 +376,27 @@ const SearchTuning = ({ searchType, setSearchType, rerankEnabled, setRerankEnabl
     </div>
   );
 };
+
+const RetrievalStatus = ({ type, rerank, hyde }) => (
+    <div className="md:flex items-center mr-2" style={{ display: 'flex', gap: '12px' }}>
+        <div className="status-chip color-blue">
+            <Search size={10} />
+            {type}
+        </div>
+        {hyde && (
+            <div className="status-chip color-amber">
+                <Zap size={10} />
+                HyDE
+            </div>
+        )}
+        {rerank && (
+            <div className="status-chip color-emerald">
+                <Sparkles size={10} />
+                Rerank
+            </div>
+        )}
+    </div>
+);
 
 // ── Main component ─────────────────────────────────────────────────────────
 const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
@@ -355,7 +411,9 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
   const [availableModels, setAvailableModels]   = useState(FALLBACK_MODELS);
   const [loadingModels, setLoadingModels]       = useState(false);
   const [searchType, setSearchType]             = useState('hybrid');
+  const [nResults, setNResults]                 = useState(4);
   const [rerankEnabled, setRerankEnabled]       = useState(true);
+  const [hydeEnabled, setHydeEnabled]           = useState(false);
   const scrollRef  = useRef(null);
   const fileInputRef = useRef(null);
   const [logs, setLogs] = useState([]);
@@ -455,7 +513,7 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
 
     try {
       await ensureSessionExists();
-      await api.askQuestion(sessionId, userMsg, selectedModel, searchType, rerankEnabled);
+      await api.askQuestion(sessionId, userMsg, selectedModel, searchType, nResults, rerankEnabled, hydeEnabled);
       await fetchMessages();
     } catch (err) {
       console.error('Failed to send message', err);
@@ -522,6 +580,9 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <MessageSquare size={18} color="var(--primary)" />
           <span style={{ fontWeight: '600' }}>Chat Session</span>
+          <div style={{ marginLeft: '12px', display: 'flex', alignItems: 'center' }}>
+            <RetrievalStatus type={searchType} rerank={rerankEnabled} hyde={hydeEnabled} />
+          </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -547,8 +608,12 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
           <SearchTuning 
             searchType={searchType} 
             setSearchType={setSearchType}
+            nResults={nResults}
+            setNResults={setNResults}
             rerankEnabled={rerankEnabled}
             setRerankEnabled={setRerankEnabled}
+            hydeEnabled={hydeEnabled}
+            setHydeEnabled={setHydeEnabled}
           />
         </div>
       </header>
@@ -618,32 +683,32 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
                               <div style={{ 
                                 marginTop: '14px', 
                                 padding: '8px 12px',
-                                background: 'rgba(var(--primary-rgb), 0.03)',
+                                background: 'rgba(255, 255, 255, 0.03)',
                                 borderRadius: '8px',
                                 border: '1px solid var(--border)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '16px',
                                 fontSize: '11px',
-                                color: 'var(--text-dim)',
+                                color: 'rgba(255, 255, 255, 0.5)',
                                 width: 'fit-content'
                               }}>
                                 {msg.total_latency_ms && (
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Total processing time">
-                                    <Clock size={12} color="var(--primary)" style={{ opacity: 0.8 }} />
-                                    <span>{(msg.total_latency_ms / 1000).toFixed(2)}s</span>
+                                    <Clock size={12} color="#60A5FA" style={{ opacity: 0.8 }} />
+                                    <span>{(msg.total_latency_ms / 1000).toFixed(2)}s Total</span>
                                   </div>
                                 )}
                                 {msg.retrieval_latency_ms !== undefined && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Context retrieval time">
-                                    <Activity size={12} color="#10b981" style={{ opacity: 0.8 }} />
-                                    <span>{msg.retrieval_latency_ms}ms</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border)', paddingLeft: '12px' }} title="Context retrieval time">
+                                    <Activity size={12} color="#34D399" style={{ opacity: 0.8 }} />
+                                    <span>{msg.retrieval_latency_ms}ms Retrieval</span>
                                   </div>
                                 )}
                                 {msg.prompt_tokens && (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Tokens (Prompt / Completion)">
-                                    <Zap size={12} color="#f59e0b" style={{ opacity: 0.8 }} />
-                                    <span>{msg.prompt_tokens + msg.completion_tokens} tokens</span>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border)', paddingLeft: '12px' }} title="Tokens (Prompt / Completion)">
+                                    <Zap size={12} color="#F59E0B" style={{ opacity: 0.8 }} />
+                                    <span>{msg.prompt_tokens + msg.completion_tokens} Tokens</span>
                                   </div>
                                 )}
                               </div>

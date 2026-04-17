@@ -25,9 +25,9 @@ const ScoreRing = ({ value, label, color, icon: Icon }) => {
     const offset = circumference - (percentage / 100) * circumference;
 
     return (
-        <div className="flex flex-col items-center justify-center p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 hover:bg-white/10 transition-colors group">
-            <div className="relative w-24 h-24 mb-4">
-                <svg className="w-full h-full transform -rotate-90">
+        <div className="dashboard-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'relative', width: '96px', height: '96px', marginBottom: '16px' }}>
+                <svg style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
                     <circle
                         cx="48"
                         cy="48"
@@ -50,35 +50,39 @@ const ScoreRing = ({ value, label, color, icon: Icon }) => {
                         strokeLinecap="round"
                     />
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-xl font-bold text-white">{percentage}%</span>
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: '20px', fontBold: '800', color: '#fff' }}>{percentage}%</span>
                 </div>
             </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-white/60 group-hover:text-white transition-colors">
-                <Icon size={16} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '600', color: 'var(--text-dim)' }}>
+                <Icon size={14} />
                 {label}
             </div>
         </div>
     );
 };
 
-const MetricCard = ({ label, value, unit, icon: Icon, color }) => (
-    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 hover:bg-white/10 transition-colors">
-        <div className="flex items-center justify-between mb-4">
-            <div className={`p-2 rounded-lg bg-${color}-500/20 text-${color}-400`}>
+const MetricCard = ({ label, value, unit, icon: Icon, colorClass }) => (
+    <div className="dashboard-card">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'between', marginBottom: '16px' }}>
+            <div className={`icon-box ${colorClass}`}>
                 <Icon size={20} />
             </div>
-            <span className="text-xs font-medium text-white/30 uppercase tracking-wider">{label}</span>
+            <span className="metric-label" style={{ marginLeft: 'auto' }}>{label}</span>
         </div>
-        <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-bold text-white">{value}</span>
-            <span className="text-sm font-medium text-white/40">{unit}</span>
+        <div style={{ display: 'flex', alignItems: 'baseline' }}>
+            <span className="metric-value">{value}</span>
+            <span className="metric-unit">{unit}</span>
         </div>
     </div>
 );
 
 const Sparkline = ({ data, color, height = 100 }) => {
-    if (!data || data.length < 2) return null;
+    if (!data || data.length < 2) return (
+        <div style={{ height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-dim)', fontSize: '10px' }}>
+            Insufficient trend data
+        </div>
+    );
     
     const max = Math.max(...data, 0.01);
     const min = Math.min(...data);
@@ -92,17 +96,17 @@ const Sparkline = ({ data, color, height = 100 }) => {
     }).join(' ');
 
     return (
-        <div className="w-full" style={{ height }}>
-            <svg viewBox={`0 0 100 ${height}`} className="w-full h-full preserve-3d" preserveAspectRatio="none">
+        <div style={{ height, width: '100%', marginTop: '12px', marginBottom: '12px' }}>
+            <svg viewBox={`0 0 100 ${height}`} style={{ width: '100%', height: '100%' }} preserveAspectRatio="none">
                 <defs>
-                    <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id={`grad-${color.replace('#', '')}`} x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor={color} stopOpacity="0.3" />
                         <stop offset="100%" stopColor={color} stopOpacity="0" />
                     </linearGradient>
                 </defs>
                 <path
                     d={`M 0,${height} L ${points} L 100,${height} Z`}
-                    fill={`url(#grad-${color})`}
+                    fill={`url(#grad-${color.replace('#', '')})`}
                 />
                 <motion.polyline
                     fill="none"
@@ -112,6 +116,8 @@ const Sparkline = ({ data, color, height = 100 }) => {
                     initial={{ pathLength: 0 }}
                     animate={{ pathLength: 1 }}
                     transition={{ duration: 2, ease: "easeInOut" }}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                 />
             </svg>
         </div>
@@ -144,11 +150,11 @@ const MetricsDashboard = () => {
     };
 
     if (loading) return (
-        <div className="flex items-center justify-center h-full">
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
             <motion.div 
                 animate={{ rotate: 360 }}
                 transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
-                className="text-blue-400"
+                style={{ color: 'var(--primary)' }}
             >
                 <RefreshCcw size={32} />
             </motion.div>
@@ -156,168 +162,142 @@ const MetricsDashboard = () => {
     );
 
     return (
-        <div className="p-8 max-w-6xl mx-auto h-full overflow-y-auto custom-scrollbar">
-            <header className="flex items-center justify-between mb-10">
+        <div className="metrics-container custom-scrollbar">
+            <header className="metrics-header">
                 <div>
-                    <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-                        <Activity className="text-blue-400" />
-                        RAG Performance Analytics
-                        <span className="text-xs font-normal px-2 py-1 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">Tier 1 Production</span>
+                    <h1 style={{ fontSize: '30px', fontWeight: '800', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px', margin: 0 }}>
+                        <Activity color="var(--primary)" />
+                        Intelligence Analytics
+                        <span style={{ fontSize: '10px', fontWeight: '700', padding: '4px 10px', background: 'rgba(99,102,241,0.15)', color: 'var(--primary)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '30px' }}>
+                            Tier 1 PRO
+                        </span>
                     </h1>
-                    <p className="text-white/40 mt-2">Real-time observability and quality scoring (RAGAS)</p>
+                    <p style={{ color: 'var(--text-dim)', marginTop: '8px', fontSize: '15px' }}>Production-grade observability & quality metrics (RAGAS)</p>
                 </div>
                 <button 
                     onClick={fetchMetrics}
-                    className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-white/60 hover:text-white transition-all active:scale-95"
+                    style={{ padding: '12px', background: 'var(--glass)', border: '1px solid var(--border)', borderRadius: '12px', color: 'var(--text-dim)', cursor: 'pointer' }}
                 >
-                    <RefreshCcw size={20} />
+                    <RefreshCcw size={18} />
                 </button>
             </header>
 
-            {/* Quality Rings */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+            {/* Quality Rounds */}
+            <section className="metrics-grid-4">
                 <ScoreRing 
-                    value={summary?.quality?.avg_faithfulness} 
+                    value={summary?.quality?.avg_faithfulness || 0} 
                     label="Faithfulness" 
                     color="#60A5FA" 
                     icon={ShieldCheck} 
                 />
                 <ScoreRing 
-                    value={summary?.quality?.avg_relevancy} 
+                    value={summary?.quality?.avg_relevancy || 0} 
                     label="Answer Relevancy" 
                     color="#F472B6" 
                     icon={Target} 
                 />
                 <ScoreRing 
-                    value={summary?.quality?.avg_precision} 
+                    value={summary?.quality?.avg_precision || 0} 
                     label="Context Precision" 
                     color="#34D399" 
                     icon={Award} 
                 />
                 <ScoreRing 
-                    value={summary?.quality?.avg_recall} 
+                    value={summary?.quality?.avg_recall || 0} 
                     label="Context Recall" 
                     color="#A78BFA" 
                     icon={TrendingUp} 
                 />
             </section>
 
-            {/* Performance Stats & Trends */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
-                <div className="lg:col-span-2 space-y-8">
-                    {/* Latency Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Sub grids for latency and history */}
+            <div className="metrics-main-grid">
+                <div>
+                    <div className="stats-sub-grid">
                         <MetricCard 
                             label="Avg Retrieval Latency" 
-                            value={summary?.latency?.avg_retrieval_ms} 
+                            value={summary?.latency?.avg_retrieval_ms || 0} 
                             unit="ms" 
-                            color="emerald" 
+                            colorClass="color-emerald" 
                             icon={Zap} 
                         />
                         <MetricCard 
                             label="Avg Generation Latency" 
-                            value={summary?.latency?.avg_generation_ms} 
+                            value={summary?.latency?.avg_generation_ms || 0} 
                             unit="ms" 
-                            color="blue" 
+                            colorClass="color-blue" 
                             icon={Clock} 
                         />
                     </div>
 
-                    {/* Quality Trends Chart */}
-                    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-                        <div className="flex items-center justify-between mb-8">
-                            <h3 className="text-white font-bold flex items-center gap-2">
-                                <TrendingUp size={18} className="text-blue-400" />
-                                7-Day Quality Trends
+                    <div className="dashboard-card">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <TrendingUp size={18} color="var(--primary)" />
+                                7-Day Performance Trends
                             </h3>
-                            <div className="flex gap-4">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-blue-400" />
-                                    <span className="text-xs text-white/40">Faithfulness</span>
+                            <div style={{ display: 'flex', gap: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#60A5FA' }} />
+                                    <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Faithfulness</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-pink-400" />
-                                    <span className="text-xs text-white/40">Relevancy</span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#F472B6' }} />
+                                    <span style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Relevancy</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div className="space-y-4">
-                            <Sparkline data={history.map(h => h.faithfulness)} color="#60A5FA" />
-                            <Sparkline data={history.map(h => h.relevancy)} color="#F472B6" />
-                        </div>
-                        
-                        <div className="flex justify-between mt-4">
+
+                        <Sparkline data={history.map(h => h.faithfulness)} color="#60A5FA" />
+                        <Sparkline data={history.map(h => h.relevancy)} color="#F472B6" />
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                             {history.length > 0 ? (
                                 <>
-                                    <span className="text-[10px] text-white/20 uppercase font-bold">{history[0].day}</span>
-                                    <span className="text-[10px] text-white/20 uppercase font-bold">{history[history.length-1].day}</span>
+                                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', fontWeight: '800', textTransform: 'uppercase' }}>{history[0].day}</span>
+                                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', fontWeight: '800', textTransform: 'uppercase' }}>{history[history.length-1].day}</span>
                                 </>
                             ) : (
-                                <span className="text-[10px] text-white/20 uppercase">No history data available</span>
+                                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)' }}>No history available</span>
                             )}
                         </div>
                     </div>
                 </div>
 
-                {/* Metrics Glossary / Info Panel */}
-                <div className="space-y-6">
-                    <div className="p-6 bg-gradient-to-br from-blue-500/10 to-purple-500/10 backdrop-blur-md rounded-2xl border border-white/10">
-                        <h3 className="text-white font-bold mb-6 flex items-center gap-2">
-                            <Info size={18} className="text-blue-400" />
-                            RAGAS Glossary
+                <aside>
+                    <div className="dashboard-card" style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(167,139,250,0.08) 100%)' }}>
+                        <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#fff', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Info size={18} color="var(--primary)" />
+                            Quality Matrix
                         </h3>
-                        <div className="space-y-6">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <ShieldCheck size={14} className="text-blue-400" />
-                                    <span className="text-xs font-bold text-white/90">Faithfulness</span>
-                                </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed">
-                                    Verifies that the generated answer is derived solely from the retrieved context. Low scores indicate potential hallucinations.
-                                </p>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Target size={14} className="text-pink-400" />
-                                    <span className="text-xs font-bold text-white/90">Answer Relevancy</span>
-                                </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed">
-                                    Quantifies how pertinent the generated answer is to the original query. Penalizes redundant or off-topic information.
-                                </p>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Layers size={14} className="text-emerald-400" />
-                                    <span className="text-xs font-bold text-white/90">Context Precision</span>
-                                </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed">
-                                    Measures the signal-to-noise ratio in retrieved fragments. High scores mean the top results contained the necessary information.
-                                </p>
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Search size={14} className="text-purple-400" />
-                                    <span className="text-xs font-bold text-white/90">Context Recall</span>
-                                </div>
-                                <p className="text-[11px] text-white/50 leading-relaxed">
-                                    Checks if all facets of the required information were present in the retrieved context. Essential for complex multi-part queries.
-                                </p>
-                            </div>
+                        <div className="glossary-item">
+                            <h4><ShieldCheck size={14} color="#60A5FA" /> Faithfulness</h4>
+                            <p>Ensures the answer is grounded in the retrieved documents, preventing AI hallucinations.</p>
+                        </div>
+                        <div className="glossary-item">
+                            <h4><Target size={14} color="#F472B6" /> Relevancy</h4>
+                            <p>Measures how effectively the generated text addresses the user's specific question.</p>
+                        </div>
+                        <div className="glossary-item">
+                            <h4><Layers size={14} color="#34D399" /> Precision</h4>
+                            <p>Evaluates if the top retrieved fragments contain the actual signal required for the answer.</p>
+                        </div>
+                        <div className="glossary-item">
+                            <h4><Search size={14} color="#A78BFA" /> Recall</h4>
+                            <p>Confirms if all necessary aspects of the ground truth were found in the context.</p>
                         </div>
                     </div>
 
-                    {/* System Volume */}
-                    <div className="p-6 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10">
-                        <div className="flex items-center justify-between">
-                            <div className="flex flex-col">
-                                <span className="text-xs text-white/30 uppercase tracking-widest font-bold">Processed Responses</span>
-                                <span className="text-2xl font-bold text-white mt-1">{summary?.volume?.total_assistant_responses || 0}</span>
+                    <div className="dashboard-card" style={{ marginTop: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div className="metric-label" style={{ marginBottom: '4px' }}>Total Interactions</div>
+                                <div className="metric-value">{summary?.volume?.total_assistant_responses || 0}</div>
                             </div>
-                            <BarChart3 size={32} className="text-white/10" />
+                            <BarChart3 size={32} style={{ opacity: 0.1 }} />
                         </div>
                     </div>
-                </div>
+                </aside>
             </div>
         </div>
     );

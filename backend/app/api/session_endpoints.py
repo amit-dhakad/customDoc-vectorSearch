@@ -122,11 +122,6 @@ def submit_feedback(feedback: schemas.FeedbackCreate, db: Session = Depends(get_
     db.refresh(db_feedback)
     return db_feedback
 
-@router.delete("/sessions/{session_id}")
-def delete_session(session_id: str, db: Session = Depends(get_db)):
-    db.query(models.Session).filter(models.Session.id == session_id).delete()
-    db.commit()
-    return {"status": "deleted"}
 
 @router.post("/sessions/{session_id}/ask")
 async def ask_question(session_id: str, message: schemas.MessageCreate, db: Session = Depends(get_db)):
@@ -154,7 +149,9 @@ async def ask_question(session_id: str, message: schemas.MessageCreate, db: Sess
         message.content, 
         model=message.model,
         search_type=message.search_type,
-        rerank=message.enable_reranking
+        n_results=message.n_results,
+        rerank=message.enable_reranking,
+        enable_hyde=message.enable_hyde
     )
     answer = result.get("answer", "")
     metrics = result.get("metrics", {})

@@ -15,9 +15,11 @@ The platform is split into two primary backend services to isolate the I/O-heavy
 
 - **Frontend**: React 18 + Vite (Glassmorphism UI, Framer Motion, Lucide Icons).
 - **Backend Orchestrator**: FastAPI (Python 3.10) + SQLAlchemy + SQLite.
-- **ML Intelligence Service**: FastAPI + PyTorch + SentenceTransformers.
+- **ML Intelligence Service**: FastAPI + PyTorch + SentenceTransformers + Rank-BM25.
+- **Reranker Engine**: Cross-Encoders (ms-marco-MiniLM-L-6-v2).
 - **LLM Engine**: Ollama (Running on host, proxied via Backend).
-- **Infrastructure**: Docker Compose with NVIDIA Container Toolkit.
+- **Evaluation Engine**: RAGAS (Integrated into RAG Service).
+- **Infrastructure**: Docker Compose with Healthcheck awareness.
 
 ### 2.2 System Modules
 
@@ -59,10 +61,19 @@ Raw text is meaningless to an LLM without structure. **CustomDoc** implements se
 - **Semantic Segmentation**: (Optional) Uses local embeddings to find natural "meaning breaks" in the document, creating chunks based on conceptual shifts rather than character counts.
 - **Structural Awareness**: In Advanced mode, the system preserves parent-child relationships (e.g., keeping a sub-header linked to its body text).
 
-### 4.2 Vector Operations
-- **Model**: `all-MiniLM-L6-v2` (default, 384-dim) or user-defined local models.
-- **Hybrid Retrieval**: Combines standard vector search with metadata-filtering (Filter by document, page, or session).
-- **Precision Modes**: Supports varying dimensionality and distance metrics (Cosine similarity by default).
+### 4.2 Multi-Stage Retrieval Pipeline
+CustomDoc moves beyond simple Top-K retrieval by implementing a verified multi-stage pipeline:
+
+1.  **Stage 1: Sparse Retrieval (BM25)**: Index-based keyword search to find exact term matches and technical jargon.
+2.  **Stage 2: Dense Retrieval (Vector)**: Neural search using `all-MiniLM-L6-v2` to capture semantic intent.
+3.  **Stage 3: Hybrid Fusion (RRF)**: We use **Reciprocal Rank Fusion** to merge sparse and dense results without requiring score normalization.
+4.  **Stage 4: Neural Reranking (Cross-Encoder)**: The top fused results are passed to a `ms-marco-MiniLM-L-6-v2` Cross-Encoder. This re-scores query-chunk pairs based on deep attention, significantly boosting precision and filtering out "semantic noise."
+
+### 4.3 Automated Evaluation (RAGAS)
+Every interaction is scientifically scored using the **RAGAS** framework:
+- **Faithfulness**: LLM-based Judge verifies if the answer claims are grounded in the retrieved chunks.
+- **Answer Relevancy**: Measures the semantic alignment between the user query and the answer.
+- **Context Precision/Recall**: Evaluates the signal quality of the retrieved context.
 
 ---
 
@@ -91,9 +102,12 @@ The system is built to utilize every ounce of local hardware.
 
 ---
 
-## 7. Data Privacy & Isolation
-- **ChromaDB Multi-Tenancy**: Every session gets a dedicated vector collection. Deleting a session in the UI triggers a hard purge of the corresponding collection and SQLite records.
-- **Local Sovereignty**: No data (text or vectors) is sent to external APIs (OpenAI/Anthropic). All intelligence remains on your hardware.
+## 7. Operational Observability
+The system implements Enterprise-Grade telemetry for real-time performance monitoring.
+
+- **Latency Tracking**: Every RAG cycle logs `retrieval_latency`, `generation_latency`, and `total_time`.
+- **Quality Trending**: Scores from the RAGAS engine are persisted to SQLite and visualized in the Performance Dashboard via daily aggregations.
+- **Structured Logging**: Unified logging format (`Timestamp | Level | Component | Message`) across all services for rapid debugging.
 
 ---
 

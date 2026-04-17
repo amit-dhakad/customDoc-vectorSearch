@@ -179,6 +179,10 @@ class VectorManager:
     def __init__(self, host: str = "chromadb", port: int = 8000):
         self.client = chromadb.HttpClient(host=host, port=port)
         self.embeddings = LocalEmbeddings()
+        # Initialize Reranker (Load once)
+        from sentence_transformers import CrossEncoder
+        self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device=COMPUTE_DEVICE)
+        logger.info(f"[RERANKER] Loaded 'ms-marco-MiniLM-L-6-v2' on {COMPUTE_DEVICE}")
 
     def upsert_chunks(
         self, 
@@ -219,35 +223,103 @@ class VectorManager:
         collection.upsert(**upsert_payload)
         logger.info(f"VECTOR_DB: Upserted {len(chunks)} fragments into '{collection_name}' using {method}")
 
-    def retrieve_context(self, collection_name: str, query: str, n_results: int = 4) -> List[str]:
+    def retrieve_context(
+        self, 
+        collection_name: str, 
+        query: str, 
+        n_results: int = 4,
+        search_type: str = "hybrid",
+        rerank: bool = True
+    ) -> List[str]:
         """
         Retrieves the top-K relevant text fragments for a given query.
-        Used by the RAG pipeline to ground LLM answers in document fact.
+        Implements Hybrid Retrieval (Dense + BM25) and Cross-Encoder Reranking.
         """
         try:
-            # 1. Get collection (silent fail if doesn't exist to prevent crashes)
+            # 1. Get collection
             try:
                 collection = self.client.get_collection(name=collection_name)
             except Exception:
-                logger.warning(f"VECTOR_DB: Collection '{collection_name}' not found. Returning empty context.")
+                logger.warning(f"VECTOR_DB: Collection '{collection_name}' not found.")
                 return []
 
-            # 2. Vectorize the query
+            # Determine results to fetch before reranking (fetch more to allow reranking to filter)
+            fetch_count = n_results * 5 if rerank else n_results
+
+            # 2. Dense Search
             query_embedding = self.embeddings.embed_query(query)
-
-            # 3. Perform similarity search
-            results = collection.query(
+            dense_results = collection.query(
                 query_embeddings=[query_embedding],
-                n_results=n_results
+                n_results=fetch_count
             )
+            dense_hits = dense_results["documents"][0] if dense_results["documents"] else []
 
-            # 4. Extract and return text contents
-            # results["documents"] is a list of lists (one per query vector)
-            return results["documents"][0] if results["documents"] else []
+            # 3. Sparse Search (BM25)
+            # If hybrid, we perform a keyword search using the rank-bm25 library
+            sparse_hits = []
+            if search_type == "hybrid":
+                sparse_hits = self._bm25_search(collection, query, n_results=fetch_count)
+
+            # 4. Hybrid Merge (Reciprocal Rank Fusion - RRF)
+            combined_hits = self._rrf_merge(dense_hits, sparse_hits, limit=fetch_count)
+
+            # 5. RERANKING PHASE (High Precision)
+            if rerank and combined_hits:
+                logger.info(f"[RAG] Reranking {len(combined_hits)} candidates...")
+                # Prepare pairs for reranker: (query, chunk_text)
+                pairs = [[query, chunk] for chunk in combined_hits]
+                scores = self.reranker.predict(pairs)
+                
+                # Sort by score descending
+                reranked = sorted(zip(scores, combined_hits), key=lambda x: x[0], reverse=True)
+                # Take Top-K
+                final_context = [chunk for score, chunk in reranked[:n_results]]
+                logger.info(f"[RAG] Reranked Top score: {reranked[0][0]:.4f}")
+                return final_context
+
+            return combined_hits[:n_results]
 
         except Exception as e:
             logger.error(f"VECTOR_DB: Retrieval failed: {e}")
             return []
+
+    def _bm25_search(self, collection, query: str, n_results: int) -> List[str]:
+        """Performs BM25 keyword search on all documents in the collection."""
+        try:
+            # Fetch all documents in this collection
+            # WARNING: This can be slow for millions of docs. 
+            # In production, use Chroma's built-in sparse indexing if available.
+            all_docs = collection.get()
+            docs = all_docs["documents"]
+            if not docs:
+                return []
+
+            tokenized_corpus = [doc.lower().split() for doc in docs]
+            bm25 = BM25Okapi(tokenized_corpus)
+            
+            tokenized_query = query.lower().split()
+            # Get top-N docs
+            return bm25.get_top_n(tokenized_query, docs, n=n_results)
+        except Exception as e:
+            logger.warning(f"BM25 Search failed: {e}")
+            return []
+
+    def _rrf_merge(self, dense_results: List[str], sparse_results: List[str], limit: int, k: int = 60) -> List[str]:
+        """
+        Merges results from two ranked lists using Reciprocal Rank Fusion.
+        formula: score = 1 / (k + rank)
+        """
+        scores = {}
+        
+        for rank, doc in enumerate(dense_results):
+            scores[doc] = scores.get(doc, 0) + 1 / (k + rank + 1)
+            
+        for rank, doc in enumerate(sparse_results):
+            scores[doc] = scores.get(doc, 0) + 1 / (k + rank + 1)
+            
+        # Sort by RRF score
+        sorted_docs = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+        return [doc for doc, score in sorted_docs[:limit]]
 
     def _upsert_colbert(self, collection_name: str, chunks: List[str], metadata: List[Dict[str, Any]] = None):
         """

@@ -31,7 +31,14 @@ export const api = {
   // Chat messages
   getMessages: (sessionId) => axios.get(`${API_BASE_URL}/sessions/${sessionId}/messages`),
   sendMessage: (sessionId, role, content) => axios.post(`${API_BASE_URL}/sessions/${sessionId}/messages`, { role, content }),
-  askQuestion: (sessionId, content, model = null) => axios.post(`${API_BASE_URL}/sessions/${sessionId}/ask`, { role: 'user', content, model }),
+  askQuestion: (sessionId, content, model = null, searchType = 'hybrid', rerank = true) => 
+    axios.post(`${API_BASE_URL}/sessions/${sessionId}/ask`, { 
+      role: 'user', 
+      content, 
+      model,
+      search_type: searchType,
+      enable_reranking: rerank
+    }),
   getDocuments: (sessionId) => axios.get(`${API_BASE_URL}/sessions/${sessionId}/documents`),
   
   // Feedback
@@ -48,6 +55,10 @@ export const api = {
 
   // Ollama — fetch locally available models via backend proxy (avoids CORS)
   getOllamaModels: () => axios.get(`${API_BASE_URL}/ollama/models`),
+
+  // Metrics
+  getMetricsSummary: () => axios.get(`${API_BASE_URL}/metrics/summary`),
+  getMetricsHistory: (days = 7) => axios.get(`${API_BASE_URL}/metrics/history?days=${days}`),
 };
 
 export const WS_URL = 'ws://localhost:8000/ws/logs';

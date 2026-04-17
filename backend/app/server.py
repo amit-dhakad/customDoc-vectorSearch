@@ -1,13 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
-
-from app.api.endpoints import router as api_router
-from app.api.session_endpoints import router as session_router
-from app.settings import settings
-from typing import Dict, List
-from fastapi import WebSocket, WebSocketDisconnect
+import time
+import sys
 import json
+import traceback
 
 """
 backend/app/server.py — FastAPI Gateway & Orchestrator
@@ -32,13 +30,14 @@ Instead, we use a Push architecture via WebSockets:
      down to the correct browser instance.
 """
 
-# Setup logging configuration for the entire application
+# Setup structured logging configuration
 logging.basicConfig(
     level=logging.INFO,
-    format="%(levelname)-8s  %(name)s — %(message)s",
+    format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("backend")
 
 # Initialize FastAPI with project metadata from settings
 app = FastAPI(
@@ -58,10 +57,49 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── MIDDLEWARE: GLOBAL ERROR HANDLER ──────────────────────────────────────────
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Prevents leaking internal stack traces to the user while ensuring we log 
+    the full error for developers.
+    """
+    error_id = f"{int(time.time())}"
+    logger.error(f"[ERROR {error_id}] Global failure on {request.url}: {exc}")
+    logger.error(traceback.format_exc())
+    
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "An internal system error occurred. Our engineers have been notified.",
+            "error_id": error_id,
+            "error_type": type(exc).__name__
+        }
+    )
+
+# ── MIDDLEWARE: REQUEST OBSERVARBILITY ───────────────────────────────────────
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """
+    Logs every incoming HTTP request, its latency, and response status.
+    Crucial for identifying bottlenecks and production debugging.
+    """
+    start_time = time.time()
+    response = await call_next(request)
+    duration = time.time() - start_time
+    
+    logger.info(
+        f"{request.method} {request.url.path} | "
+        f"Status: {response.status_code} | "
+        f"Duration: {duration:.4f}s"
+    )
+    return response
+
 # Include modularized routers. 
 # This promotes a clean directory structure by separating endpoints by domain.
 app.include_router(api_router, prefix=settings.API_V1_STR)
 app.include_router(session_router, prefix=settings.API_V1_STR, tags=["Sessions"])
+app.include_router(metrics_router, prefix=settings.API_V1_STR, tags=["Metrics"])
 
 # WebSocket Manager for real-time log streaming
 class ConnectionManager:

@@ -38,6 +38,7 @@ import {
   Loader2,
   Cpu,
   Zap,
+  BarChart3,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from './api';
@@ -47,6 +48,7 @@ import './index.css';
 import ChatWindow from './components/ChatWindow';
 import AdvancedParsing from './components/AdvancedParsing';
 import InterviewPrep from './components/InterviewPrep';
+import MetricsDashboard from './components/MetricsDashboard';
 
 // ── Device Status Badge ───────────────────────────────────────────────────────────
 const DeviceBadge = () => {
@@ -61,7 +63,7 @@ const DeviceBadge = () => {
 
   useEffect(() => {
     fetchStats();
-    const interval = setInterval(fetchStats, 15000);
+    const interval = setInterval(fetchStats, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -70,6 +72,7 @@ const DeviceBadge = () => {
   const device = stats.device || 'cpu';
   const gpu    = stats.gpu;
   const isGpu  = device === 'cuda' || device === 'mps';
+  const isWorking = stats.pipeline_status === 'PROCESSING';
 
   const color  = device === 'cuda' ? '#10b981'
                : device === 'mps'  ? '#f59e0b'
@@ -84,15 +87,16 @@ const DeviceBadge = () => {
       marginTop: '12px',
       padding: '10px 12px',
       borderRadius: '10px',
-      background: `${color}11`,
-      border: `1px solid ${color}33`,
+      background: isWorking ? `${color}22` : `${color}11`,
+      border: `1px solid ${isWorking ? color : color + '33'}`,
       display: 'flex',
       alignItems: 'center',
       gap: '10px',
+      transition: '0.3s ease',
     }}>
       {/* Pulse dot */}
       <div style={{ position: 'relative', flexShrink: 0 }}>
-        {isGpu && (
+        {(isGpu || isWorking) && (
           <div style={{
             position: 'absolute', inset: '-3px',
             borderRadius: '50%',
@@ -111,7 +115,7 @@ const DeviceBadge = () => {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: '11px', fontWeight: '700', color, display: 'flex', alignItems: 'center', gap: '4px' }}>
           {isGpu ? <Zap size={11} /> : <Cpu size={11} />}
-          {label} Active
+          {label} {isWorking ? 'Processing' : 'Active'}
         </div>
         {gpu && (
           <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -119,10 +123,12 @@ const DeviceBadge = () => {
           </div>
         )}
         {!gpu && device === 'cuda' && (
-          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>CUDA — VRAM loading…</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>CUDA — Powering Intelligence</div>
         )}
         {device === 'cpu' && (
-          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>CPU · {Math.round(stats.cpu)}% · {Math.round(stats.memory)}% RAM</div>
+          <div style={{ fontSize: '10px', color: 'var(--text-dim)', marginTop: '2px' }}>
+            CPU {Math.round(stats.process_cpu || stats.cpu)}% · {stats.process_mem_mb || 0}MB Used ({Math.round(stats.memory)}%)
+          </div>
         )}
       </div>
     </div>
@@ -198,6 +204,22 @@ const Sidebar = ({ sessions, currentSession, onCreateSession, onDeleteSession })
           <Settings size={18} />
           Advanced Parsing
         </Link>
+        <Link 
+          to="/metrics" 
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px', 
+            padding: '12px', 
+            borderRadius: '12px', 
+            color: 'var(--text-dim)', 
+            textDecoration: 'none',
+            fontSize: '14px'
+          }}
+        >
+          <BarChart3 size={18} />
+          Performance Metrics
+        </Link>
         <DeviceBadge />
       </div>
     </aside>
@@ -258,6 +280,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/chat/:sessionId" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><ChatWindow sessions={sessions} onRefreshSessions={fetchSessions} /></MainLayout>} />
         <Route path="/advanced" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><AdvancedParsing /></MainLayout>} />
+        <Route path="/metrics" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><MetricsDashboard /></MainLayout>} />
         <Route path="/interview" element={<InterviewPrep />} />
         <Route path="/" element={<MainLayout sessions={sessions} onCreateSession={handleCreateSession} onDeleteSession={handleDeleteSession}><WelcomeView onStart={handleCreateSession}/></MainLayout>} />
       </Routes>

@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Functions in Python — Full Video Script</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;600;700&family=Instrument+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0e;
+    --surface: #111418;
+    --surface2: #181d24;
+    --border: #1e2630;
+    --accent: #4b9eff;
+    --accent2: #4ef0c0;
+    --accent3: #f5a623;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --code-bg: #0d1117;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Instrument Sans', sans-serif;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* HERO */
+  .hero {
+    background: radial-gradient(ellipse 80% 60% at 50% -10%, #0d1a30 0%, var(--bg) 70%);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 40px 60px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      90deg, transparent 0, transparent 60px,
+      rgba(75,158,255,0.03) 60px, rgba(75,158,255,0.03) 61px
+    ),
+    repeating-linear-gradient(
+      0deg, transparent 0, transparent 60px,
+      rgba(75,158,255,0.03) 60px, rgba(75,158,255,0.03) 61px
+    );
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(75,158,255,0.1);
+    border: 1px solid rgba(75,158,255,0.3);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    padding: 6px 14px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    position: relative;
+  }
+  .python-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(75,158,255,0.08);
+    border: 1px solid rgba(75,158,255,0.2);
+    border-radius: 6px;
+    padding: 8px 16px;
+    margin: 0 auto 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+  }
+  .hero h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 400;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero-sub {
+    font-size: 1.1rem;
+    color: var(--muted);
+    max-width: 600px;
+    margin: 0 auto 40px;
+    position: relative;
+  }
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    position: relative;
+  }
+  .hero-meta span { display: flex; align-items: center; gap: 6px; }
+  .hero-meta .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent2); display: inline-block; }
+
+  /* TOC */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px 36px;
+    margin: 48px 32px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .toc-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+  .toc-list { list-style: none; columns: 2; column-gap: 40px; }
+  .toc-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 0;
+    font-size: 0.9rem;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .toc-list li .num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    min-width: 24px;
+  }
+
+  /* SECTION */
+  .section {
+    padding: 60px 32px;
+    border-bottom: 1px solid var(--border);
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .section-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    margin-bottom: 36px;
+  }
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    padding: 6px 10px;
+    background: rgba(75,158,255,0.08);
+    border: 1px solid rgba(75,158,255,0.2);
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 8px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 2rem;
+    font-weight: 400;
+    line-height: 1.15;
+  }
+
+  /* SCRIPT BLOCK */
+  .script-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .script-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .script-label.narration { color: var(--accent2); }
+  .script-label.on-screen { color: var(--accent); }
+  .script-label.direction { color: var(--accent3); }
+  .script-label .indicator { width: 8px; height: 8px; border-radius: 50%; }
+  .narration .indicator { background: var(--accent2); }
+  .on-screen .indicator { background: var(--accent); }
+  .direction .indicator { background: var(--accent3); }
+  .script-content { padding: 18px 22px; font-size: 0.97rem; line-height: 1.8; }
+  .script-content.direction-text { color: var(--muted); font-style: italic; font-size: 0.88rem; }
+
+  /* CODE */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 20px 0;
+    overflow: hidden;
+  }
+  .code-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 18px;
+    background: rgba(255,255,255,0.03);
+    border-bottom: 1px solid var(--border);
+  }
+  .code-lang {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .code-dots { display: flex; gap: 6px; }
+  .code-dots span { width: 10px; height: 10px; border-radius: 50%; }
+  .code-dots span:nth-child(1) { background: #ff5f57; }
+  .code-dots span:nth-child(2) { background: #febc2e; }
+  .code-dots span:nth-child(3) { background: #28c840; }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.75;
+    padding: 22px 24px;
+    overflow-x: auto;
+    color: #abb2bf;
+  }
+  /* Python syntax colors */
+  .kw  { color: #c678dd; }   /* def, return, if, for, etc */
+  .fn  { color: #61afef; }   /* function names */
+  .str { color: #98c379; }   /* strings */
+  .num { color: #d19a66; }   /* numbers */
+  .cm  { color: #5c6370; font-style: italic; } /* comments */
+  .ret { color: #e06c75; }   /* return keyword */
+  .dec { color: #e5c07b; }   /* decorators */
+  .bi  { color: #56b6c2; }   /* builtins: print, len, range */
+  .tp  { color: #e5c07b; }   /* type hints */
+
+  /* CALLOUT */
+  .callout {
+    border-left: 3px solid var(--accent);
+    background: rgba(75,158,255,0.05);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+    font-size: 0.93rem;
+  }
+  .callout.tip { border-color: var(--accent2); background: rgba(78,240,192,0.05); }
+  .callout.warn { border-color: var(--accent3); background: rgba(245,166,35,0.05); }
+  .callout-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+  .callout.tip .callout-label { color: var(--accent2); }
+  .callout.warn .callout-label { color: var(--accent3); }
+
+  /* VISUAL DIAGRAM */
+  .visual-diagram {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+    margin: 20px 0;
+    text-align: center;
+  }
+  .diagram-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 20px;
+  }
+  .func-anatomy {
+    display: inline-flex;
+    align-items: stretch;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    gap: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .func-part {
+    padding: 12px 18px;
+    border-right: 1px solid var(--border);
+    position: relative;
+  }
+  .func-part:last-child { border-right: none; }
+  .func-part .part-label {
+    font-size: 0.55rem;
+    display: block;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .func-part.keyword { background: rgba(198,120,221,0.15); color: #c678dd; }
+  .func-part.keyword .part-label { color: rgba(198,120,221,0.6); }
+  .func-part.name { background: rgba(97,175,239,0.15); color: #61afef; }
+  .func-part.name .part-label { color: rgba(97,175,239,0.6); }
+  .func-part.params { background: rgba(152,195,121,0.12); color: #98c379; }
+  .func-part.params .part-label { color: rgba(152,195,121,0.6); }
+  .func-part.body { background: rgba(75,158,255,0.08); color: var(--accent); }
+  .func-part.body .part-label { color: rgba(75,158,255,0.5); }
+  .func-part.hint { background: rgba(229,192,123,0.1); color: #e5c07b; }
+  .func-part.hint .part-label { color: rgba(229,192,123,0.6); }
+
+  .flow-diagram {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .flow-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    text-align: center;
+  }
+  .flow-box.input { border-color: var(--accent2); color: var(--accent2); }
+  .flow-box.process { border-color: var(--accent); color: var(--accent); }
+  .flow-box.output { border-color: var(--accent3); color: var(--accent3); }
+  .flow-arrow { color: var(--muted); font-size: 1.2rem; }
+
+  /* CHAPTER DIVIDER */
+  .chapter-divider {
+    text-align: center;
+    padding: 48px 32px 0;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  .chapter-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+  }
+  .chapter-label::before,
+  .chapter-label::after {
+    content: '';
+    flex: 1;
+    max-width: 80px;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* COMPARE TABLE */
+  .compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 0.85rem;
+  }
+  .compare-table th {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 12px 16px;
+    background: var(--surface2);
+    color: var(--muted);
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: top;
+  }
+  .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+  }
+  .tag.good { background: rgba(78,240,192,0.1); color: var(--accent2); }
+  .tag.warn { background: rgba(245,166,35,0.1); color: var(--accent3); }
+
+  footer {
+    text-align: center;
+    padding: 48px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  footer span { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-badge">📹 Full Video Script — Python Series</div>
+  <div class="python-logo">🐍 &nbsp; Python 3.10+</div>
+  <h1>Master Functions<br><em>in Python</em></h1>
+  <p class="hero-sub">A complete deep-dive using 100% Python — from first principles to decorators, closures, async coroutines, and functional patterns. Every line scripted.</p>
+  <div class="hero-meta">
+    <span><span class="dot"></span> Runtime ~45 min</span>
+    <span><span class="dot"></span> Python 3.10+</span>
+    <span><span class="dot"></span> 8 Chapters</span>
+  </div>
+</div>
+
+<!-- TOC -->
+<div class="toc">
+  <div class="toc-title">// Script Contents</div>
+  <ul class="toc-list">
+    <li><span class="num">01</span> Hook & What Are Functions?</li>
+    <li><span class="num">02</span> Anatomy of a Python Function</li>
+    <li><span class="num">03</span> Parameters — All Six Kinds</li>
+    <li><span class="num">04</span> Return Values & Type Hints</li>
+    <li><span class="num">05</span> Scope, LEGB & Closures</li>
+    <li><span class="num">06</span> First-Class Functions & Lambdas</li>
+    <li><span class="num">07</span> Pure Functions & Side Effects</li>
+    <li><span class="num">08</span> Decorators, Async & Advanced Patterns</li>
+  </ul>
+</div>
+
+
+<!-- ═══ CH 01 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter One</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2 class="section-title">Hook & What Are Functions?</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label direction"><span class="indicator"></span> Direction / Camera</div>
+    <div class="script-content direction-text">
+      Open cold. Black screen. Sound of keyboard typing. Cut to a messy Python file — the same 12-line price-calculation logic copy-pasted six times with slightly different variable names. Slowly zoom in to show the chaos.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Look at this. Six copies of the exact same logic. Six places to break. Six places where a tax rate change needs to be updated manually. Six chances for a typo that causes a financial bug in production. This is what Python looks like before you truly understand functions. And by the end of this video, you'll never write code like this again.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label direction"><span class="indicator"></span> Direction</div>
+    <div class="script-content direction-text">
+      Cut to presenter on camera. Confident, direct. Minimal background.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      Hey, welcome back. Today we're going deep on functions in Python. Not a beginner overview. A complete, thorough, senior-engineer-level breakdown — from Python's unique syntax and its six kinds of parameters, all the way to decorators, closures, <code>functools</code>, and <code>asyncio</code> coroutines.
+      <br><br>
+      Python's approach to functions is special. Functions are objects. You can pass them around, wrap them, compose them, and use them to build abstractions that would take pages of code in other languages. Let's dig in.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label on-screen"><span class="indicator"></span> On-Screen — Animate word by word</div>
+    <div class="script-content">
+      <strong>"A function is a named, reusable block of code that performs a specific task."</strong>
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Three words: <strong>Named</strong>, <strong>Reusable</strong>, <strong>Specific</strong>. That's the core contract. Think of it like a recipe. You write a recipe for chocolate cake once. Every time you want chocolate cake, you follow the recipe — you don't invent it from scratch. Functions are your recipes. The ingredients are the inputs. The cake is the return value.
+      <br><br>
+      Why do functions exist? Four reasons that matter every single day on the job. <strong>Reusability</strong> — write once, call everywhere. <strong>Readability</strong> — <code>calculate_tax(price)</code> tells a story. <strong>Maintainability</strong> — fix logic in one place, not twenty. <strong>Testability</strong> — a function is the perfect unit to test in isolation.
+    </div>
+  </div>
+
+  <div class="visual-diagram">
+    <div class="diagram-title">// The Function as a Machine</div>
+    <div class="flow-diagram">
+      <div class="flow-box input">📥 Input<br><small>Arguments</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box process">⚙️ Function<br><small>Body / Logic</small></div>
+      <span class="flow-arrow">→</span>
+      <div class="flow-box output">📤 Output<br><small>Return Value</small></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ CH 02 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Two</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2 class="section-title">Anatomy of a Python Function</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label direction"><span class="indicator"></span> Direction</div>
+    <div class="script-content direction-text">
+      Switch to code editor view. Highlight each part as narrated. Use colored annotations and arrows.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Let's dissect a Python function part by part. Python's syntax is clean and intentional — every piece is there for a reason.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — full anatomy</span>
+    </div>
+    <pre>
+<span class="cm"># Full anatomy of a Python function</span>
+<span class="kw">def</span> <span class="fn">greet_user</span>(name: <span class="tp">str</span>, greeting: <span class="tp">str</span> = <span class="str">"Hello"</span>) -> <span class="tp">str</span>:
+    <span class="str">"""Return a personalised greeting message.
+
+    Args:
+        name: The person's name.
+        greeting: Optional greeting word. Defaults to 'Hello'.
+
+    Returns:
+        A formatted greeting string.
+    """</span>
+    message = <span class="str">f"{greeting}, {name}!"</span>   <span class="cm"># ← function body</span>
+    <span class="ret">return</span> message                    <span class="cm"># ← return statement</span>
+
+
+<span class="cm"># Calling the function</span>
+result  = <span class="fn">greet_user</span>(<span class="str">"Alice"</span>)            <span class="cm"># → "Hello, Alice!"</span>
+result2 = <span class="fn">greet_user</span>(<span class="str">"Bob"</span>, <span class="str">"Hey"</span>)      <span class="cm"># → "Hey, Bob!"</span>
+result3 = <span class="fn">greet_user</span>(name=<span class="str">"Eve"</span>, greeting=<span class="str">"Hi"</span>)  <span class="cm"># keyword call</span></pre>
+  </div>
+
+  <div class="visual-diagram">
+    <div class="diagram-title">// Python Function Anatomy — Labeled Parts</div>
+    <div class="func-anatomy">
+      <div class="func-part keyword"><span class="part-label">keyword</span>def</div>
+      <div class="func-part name"><span class="part-label">name (snake_case)</span>greet_user</div>
+      <div class="func-part params"><span class="part-label">parameters</span>(name, greeting)</div>
+      <div class="func-part hint"><span class="part-label">return type hint</span>-> str</div>
+      <div class="func-part body"><span class="part-label">body (indented)</span>... return ...</div>
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      <code>def</code> — the keyword that declares a function. Short for "define." In Python there's only one keyword for this, unlike JavaScript's three styles.
+      <br><br>
+      The <strong>name</strong> follows Python's <code>snake_case</code> convention — lowercase words separated by underscores. This is not optional style, it's the PEP 8 standard the entire Python community follows. <code>greet_user</code>, not <code>greetUser</code>, not <code>GreetUser</code>.
+      <br><br>
+      <strong>Type hints</strong> — the <code>: str</code> after each parameter and <code>-> str</code> before the colon. Python doesn't enforce these at runtime, but they are read by type checkers like mypy, by your IDE, and by every engineer who reads your code after you. In production codebases, type hints are not optional.
+      <br><br>
+      The <strong>docstring</strong> — the triple-quoted string immediately inside the function. This is Python's built-in documentation system. <code>help(greet_user)</code> in the REPL will display this. Tools like Sphinx generate full docs from it. Always write docstrings for public functions.
+      <br><br>
+      The <strong>body</strong> is indented — not wrapped in curly braces. Python uses indentation as syntax. Consistent 4-space indentation is the standard.
+      <br><br>
+      And <code>return</code> sends the value back. Without a return statement, Python implicitly returns <code>None</code>.
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">⚡ Key Insight</div>
+    A function <em>definition</em> creates a function object and binds it to a name. It does NOT run any code. The function <em>call</em> — the parentheses — is what executes it. <code>greet_user</code> is the object. <code>greet_user("Alice")</code> calls it.
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      In Python there are two types of functions at the syntax level: <code>def</code> functions and <code>lambda</code> expressions. Lambda creates a small anonymous function inline — useful for simple one-liners. We'll cover lambdas fully in Chapter 6. For now, know that any serious logic belongs in a <code>def</code> — not a lambda.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — def vs lambda</span>
+    </div>
+    <pre>
+<span class="cm"># def — full function, any complexity</span>
+<span class="kw">def</span> <span class="fn">square</span>(n: <span class="tp">int</span>) -> <span class="tp">int</span>:
+    <span class="ret">return</span> n ** <span class="num">2</span>
+
+<span class="cm"># lambda — anonymous, single expression only</span>
+square_lambda = <span class="kw">lambda</span> n: n ** <span class="num">2</span>
+
+<span class="cm"># Both work the same way when called</span>
+<span class="fn">square</span>(<span class="num">5</span>)         <span class="cm"># → 25</span>
+square_lambda(<span class="num">5</span>)  <span class="cm"># → 25</span>
+
+<span class="cm"># Lambda common usage: as a sort key</span>
+users = [(<span class="str">"Alice"</span>, <span class="num">30</span>), (<span class="str">"Bob"</span>, <span class="num">25</span>), (<span class="str">"Eve"</span>, <span class="num">35</span>)]
+users.<span class="fn">sort</span>(key=<span class="kw">lambda</span> u: u[<span class="num">1</span>])  <span class="cm"># sort by age</span>
+<span class="cm"># → [("Bob", 25), ("Alice", 30), ("Eve", 35)]</span></pre>
+  </div>
+</div>
+
+
+<!-- ═══ CH 03 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Three</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2 class="section-title">Parameters — All Six Kinds</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      Here's where Python is genuinely unique. Most languages have two or three ways to pass arguments. Python has <em>six</em> distinct parameter kinds. Six. And knowing all six is what separates Python developers who write scripts from Python engineers who design APIs. Let's go through every single one.
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">📌 Parameters vs Arguments — the rule</div>
+    <strong>Parameters</strong> are names in the function <em>definition</em>. <strong>Arguments</strong> are the actual values in the function <em>call</em>. Parameters are blueprint slots. Arguments are the concrete data you fill those slots with.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — all 6 parameter kinds</span>
+    </div>
+    <pre>
+<span class="cm"># ─── Kind 1: Positional Parameters ───────────────────────────</span>
+<span class="kw">def</span> <span class="fn">introduce</span>(name: <span class="tp">str</span>, age: <span class="tp">int</span>) -> <span class="tp">str</span>:
+    <span class="ret">return</span> <span class="str">f"I'm {name} and I'm {age} years old."</span>
+
+<span class="fn">introduce</span>(<span class="str">"Alice"</span>, <span class="num">30</span>)   <span class="cm"># positional — order matters</span>
+
+
+<span class="cm"># ─── Kind 2: Default Parameters ──────────────────────────────</span>
+<span class="kw">def</span> <span class="fn">connect</span>(host: <span class="tp">str</span>, port: <span class="tp">int</span> = <span class="num">3000</span>, protocol: <span class="tp">str</span> = <span class="str">"https"</span>) -> <span class="tp">str</span>:
+    <span class="ret">return</span> <span class="str">f"{protocol}://{host}:{port}"</span>
+
+<span class="fn">connect</span>(<span class="str">"example.com"</span>)               <span class="cm"># → "https://example.com:3000"</span>
+<span class="fn">connect</span>(<span class="str">"example.com"</span>, <span class="num">8080</span>)         <span class="cm"># → "https://example.com:8080"</span>
+
+
+<span class="cm"># ─── Kind 3: *args — Variable Positional ─────────────────────</span>
+<span class="kw">def</span> <span class="fn">total</span>(*numbers: <span class="tp">float</span>) -> <span class="tp">float</span>:
+    <span class="cm"># *args collects extra positional args into a tuple</span>
+    <span class="ret">return</span> <span class="bi">sum</span>(numbers)
+
+<span class="fn">total</span>(<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>)           <span class="cm"># → 6</span>
+<span class="fn">total</span>(<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>, <span class="num">40</span>)   <span class="cm"># → 100</span>
+
+
+<span class="cm"># ─── Kind 4: Keyword-Only Parameters (after *) ───────────────</span>
+<span class="kw">def</span> <span class="fn">create_report</span>(title: <span class="tp">str</span>, *, verbose: <span class="tp">bool</span> = <span class="kw">False</span>, fmt: <span class="tp">str</span> = <span class="str">"pdf"</span>):
+    <span class="cm"># The bare * forces everything after it to be keyword-only</span>
+    <span class="bi">print</span>(<span class="str">f"Report: {title} | verbose={verbose} | format={fmt}"</span>)
+
+<span class="fn">create_report</span>(<span class="str">"Q4 Sales"</span>, verbose=<span class="kw">True</span>)     <span class="cm"># ✅</span>
+<span class="cm"># create_report("Q4 Sales", True)  ← ❌ TypeError</span>
+
+
+<span class="cm"># ─── Kind 5: **kwargs — Variable Keyword ─────────────────────</span>
+<span class="kw">def</span> <span class="fn">create_user</span>(name: <span class="tp">str</span>, **kwargs) -> <span class="tp">dict</span>:
+    <span class="cm"># **kwargs collects extra keyword args into a dict</span>
+    user = {<span class="str">"name"</span>: name}
+    user.<span class="fn">update</span>(kwargs)
+    <span class="ret">return</span> user
+
+<span class="fn">create_user</span>(<span class="str">"Alice"</span>, role=<span class="str">"admin"</span>, email=<span class="str">"a@co.com"</span>, active=<span class="kw">True</span>)
+<span class="cm"># → {"name": "Alice", "role": "admin", "email": "a@co.com", "active": True}</span>
+
+
+<span class="cm"># ─── Kind 6: Positional-Only Parameters (/ syntax, Python 3.8+) ─</span>
+<span class="kw">def</span> <span class="fn">distance</span>(x: <span class="tp">float</span>, y: <span class="tp">float</span>, /) -> <span class="tp">float</span>:
+    <span class="cm"># Everything before / CANNOT be called by keyword</span>
+    <span class="ret">return</span> (x**<span class="num">2</span> + y**<span class="num">2</span>) ** <span class="num">0.5</span>
+
+<span class="fn">distance</span>(<span class="num">3</span>, <span class="num">4</span>)          <span class="cm"># ✅ → 5.0</span>
+<span class="cm"># distance(x=3, y=4)  ← ❌ TypeError</span>
+
+
+<span class="cm"># ─── All six combined in one signature ───────────────────────</span>
+<span class="kw">def</span> <span class="fn">mega_func</span>(pos_only, /, normal, *args, kw_only, **kwargs):
+    <span class="bi">print</span>(pos_only, normal, args, kw_only, kwargs)</pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Let's walk each one.
+      <br><br>
+      <strong>Positional parameters</strong> — the standard. Values matched by position. Order matters. This is what every language has.
+      <br><br>
+      <strong>Default parameters</strong> — provide a fallback when the argument is omitted. One critical rule: defaults must come after non-defaults in the signature. And never use a mutable object like a list or dict as a default — Python creates it once and reuses the same object across all calls. Use <code>None</code> as the default and create the object inside the body instead.
+      <br><br>
+      <strong>*args</strong> — the single asterisk packs any extra positional arguments into a tuple. You can pass zero, three, or fifty values and <code>numbers</code> will be a tuple of all of them. This is how <code>print()</code> and <code>max()</code> accept variable numbers of arguments.
+      <br><br>
+      <strong>Keyword-only parameters</strong> — the bare asterisk in the middle of a signature forces everything after it to be called by keyword. No positional shortcutting. This is API design — it makes calls self-documenting and prevents argument-order bugs in complex functions.
+      <br><br>
+      <strong>**kwargs</strong> — the double asterisk packs any extra keyword arguments into a dictionary. This is how you build truly flexible APIs that accept arbitrary configuration. Django's ORM query methods use this pattern extensively.
+      <br><br>
+      <strong>Positional-only parameters</strong> — introduced in Python 3.8. The forward slash means these parameters cannot be called by keyword. They mirror how Python's built-in C functions work. Use this when parameter names are implementation details you don't want to make part of your public API.
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-label">⚠ Mutable Default Trap</div>
+    Never do <code>def add_item(lst=[])</code>. Python creates the list once and the same list is shared across every call. The correct pattern: <code>def add_item(lst=None): lst = lst or []</code>. This is one of Python's most famous gotchas — and senior engineers always know it.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — the mutable default trap</span>
+    </div>
+    <pre>
+<span class="cm"># ❌ WRONG — the list is created once at function definition time</span>
+<span class="kw">def</span> <span class="fn">append_bad</span>(item, result=[]):
+    result.<span class="fn">append</span>(item)
+    <span class="ret">return</span> result
+
+<span class="fn">append_bad</span>(<span class="num">1</span>)   <span class="cm"># → [1]</span>
+<span class="fn">append_bad</span>(<span class="num">2</span>)   <span class="cm"># → [1, 2]  ← SURPRISE! not [2]</span>
+<span class="fn">append_bad</span>(<span class="num">3</span>)   <span class="cm"># → [1, 2, 3] ← the list accumulates across calls!</span>
+
+<span class="cm"># ✅ CORRECT — use None as sentinel, create fresh list in body</span>
+<span class="kw">def</span> <span class="fn">append_good</span>(item, result=<span class="kw">None</span>):
+    <span class="kw">if</span> result <span class="kw">is</span> <span class="kw">None</span>:
+        result = []
+    result.<span class="fn">append</span>(item)
+    <span class="ret">return</span> result
+
+<span class="fn">append_good</span>(<span class="num">1</span>)   <span class="cm"># → [1]</span>
+<span class="fn">append_good</span>(<span class="num">2</span>)   <span class="cm"># → [2]  ✅ fresh list every time</span></pre>
+  </div>
+</div>
+
+
+<!-- ═══ CH 04 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Four</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2 class="section-title">Return Values & Type Hints</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      Return values are how a function communicates its result. Python has several return patterns that level up your code quality significantly — including type hints that make returns explicit and self-documenting.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — return mechanics & patterns</span>
+    </div>
+    <pre>
+<span class="kw">from</span> typing <span class="kw">import</span> Optional, Union, tuple <span class="kw">as</span> Tuple
+
+<span class="cm"># return immediately exits the function</span>
+<span class="kw">def</span> <span class="fn">find_first</span>(items: <span class="tp">list</span>, condition) -> Optional[<span class="tp">any</span>]:
+    <span class="kw">for</span> item <span class="kw">in</span> items:
+        <span class="kw">if</span> <span class="fn">condition</span>(item):
+            <span class="ret">return</span> item   <span class="cm"># ← exits loop AND function immediately</span>
+    <span class="ret">return</span> <span class="kw">None</span>           <span class="cm"># ← explicit None is cleaner than implicit</span>
+
+
+<span class="cm"># Guard clauses — early returns eliminate deep nesting</span>
+<span class="kw">def</span> <span class="fn">process_order</span>(order: <span class="tp">dict</span>) -> <span class="tp">dict</span>:
+    <span class="kw">if</span> <span class="kw">not</span> order:
+        <span class="ret">return</span> {<span class="str">"error"</span>: <span class="str">"No order provided"</span>}
+    <span class="kw">if</span> <span class="kw">not</span> order.<span class="fn">get</span>(<span class="str">"items"</span>):
+        <span class="ret">return</span> {<span class="str">"error"</span>: <span class="str">"Empty order"</span>}
+    <span class="kw">if</span> order.<span class="fn">get</span>(<span class="str">"total"</span>, <span class="num">0</span>) < <span class="num">0</span>:
+        <span class="ret">return</span> {<span class="str">"error"</span>: <span class="str">"Invalid total"</span>}
+
+    <span class="cm"># Happy path — clean, unindented, readable</span>
+    <span class="ret">return</span> {<span class="str">"success"</span>: <span class="kw">True</span>, <span class="str">"order_id"</span>: <span class="fn">generate_id</span>()}
+
+
+<span class="cm"># Returning multiple values — Python returns a tuple</span>
+<span class="kw">def</span> <span class="fn">get_min_max</span>(numbers: <span class="tp">list</span>[<span class="tp">float</span>]) -> <span class="tp">tuple</span>[<span class="tp">float</span>, <span class="tp">float</span>]:
+    <span class="ret">return</span> <span class="bi">min</span>(numbers), <span class="bi">max</span>(numbers)   <span class="cm"># implicit tuple</span>
+
+lo, hi = <span class="fn">get_min_max</span>([<span class="num">3</span>, <span class="num">1</span>, <span class="num">7</span>, <span class="num">2</span>])   <span class="cm"># tuple unpacking</span>
+<span class="cm"># lo = 1, hi = 7</span>
+
+
+<span class="cm"># Return type hint: None when function has no meaningful output</span>
+<span class="kw">def</span> <span class="fn">log_event</span>(event: <span class="tp">str</span>) -> <span class="kw">None</span>:
+    <span class="bi">print</span>(<span class="str">f"[LOG] {event}"</span>)
+    <span class="cm"># no return needed — implicit None</span>
+
+
+<span class="cm"># Union return type — can return different types (use sparingly)</span>
+<span class="kw">def</span> <span class="fn">parse_int</span>(value: <span class="tp">str</span>) -> Union[<span class="tp">int</span>, <span class="kw">None</span>]:
+    <span class="kw">try</span>:
+        <span class="ret">return</span> <span class="bi">int</span>(value)
+    <span class="kw">except</span> ValueError:
+        <span class="ret">return</span> <span class="kw">None</span></pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Python's most elegant return feature is multiple return values. When you write <code>return min(numbers), max(numbers)</code>, Python packages those two values into a tuple automatically. On the receiving side, you unpack with <code>lo, hi = get_min_max(...)</code>. This is idiomatic Python and it's used everywhere — from standard library functions like <code>divmod()</code> to <code>dict.items()</code>.
+      <br><br>
+      <strong>Guard clauses</strong> — return early on every error condition before you reach the logic that actually does the work. The happy path sits at the bottom, unindented and clean. Compare this to a deeply nested if-else tree. Guard clauses win every time for readability.
+      <br><br>
+      <strong>Type hints on return values</strong> — the <code>-> type</code> syntax. Use <code>-> None</code> for functions that produce side effects but return nothing meaningful. Use <code>Optional[X]</code> when the function might return <code>None</code>. Use <code>tuple[A, B]</code> to document multiple return values. These hints cost nothing at runtime but save enormous debugging time.
+    </div>
+  </div>
+
+  <div class="callout warn">
+    <div class="callout-label">⚠ Common Mistake</div>
+    Forgetting that a function with no <code>return</code> statement — or a bare <code>return</code> — gives back <code>None</code>. If you store a function's result in a variable and get <code>None</code> unexpectedly, this is almost always why. Always check your function has an explicit <code>return</code> on the expected code path.
+  </div>
+</div>
+
+
+<!-- ═══ CH 05 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Five</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2 class="section-title">Scope, LEGB & Closures</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      Scope in Python follows a specific lookup rule called LEGB. Four letters. Know these four letters and you will never be confused by a NameError or an unexpected variable value again.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label on-screen"><span class="indicator"></span> On-Screen — Animate the LEGB rule</div>
+    <div class="script-content">
+      Display four expanding boxes labeled: <strong>L — Local → E — Enclosing → G — Global → B — Built-in</strong>. Show lookup order with arrows.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — LEGB scope rule</span>
+    </div>
+    <pre>
+<span class="cm"># B — Built-in: len, print, range, etc. Always available</span>
+<span class="cm"># G — Global: defined at module top level</span>
+tax_rate = <span class="num">0.08</span>   <span class="cm"># global variable</span>
+
+<span class="kw">def</span> <span class="fn">outer</span>():
+    <span class="cm"># E — Enclosing: visible to nested (inner) functions</span>
+    discount = <span class="num">0.1</span>
+
+    <span class="kw">def</span> <span class="fn">inner</span>():
+        <span class="cm"># L — Local: only exists inside inner()</span>
+        markup = <span class="num">0.05</span>
+        <span class="bi">print</span>(tax_rate)   <span class="cm"># ✅ Global</span>
+        <span class="bi">print</span>(discount)   <span class="cm"># ✅ Enclosing</span>
+        <span class="bi">print</span>(markup)     <span class="cm"># ✅ Local</span>
+        <span class="bi">print</span>(<span class="bi">len</span>)        <span class="cm"># ✅ Built-in</span>
+
+    <span class="fn">inner</span>()
+    <span class="cm"># print(markup)  ← ❌ NameError — markup only exists in inner()</span>
+
+<span class="fn">outer</span>()
+
+
+<span class="cm"># global keyword — modify a global from inside a function</span>
+counter = <span class="num">0</span>
+
+<span class="kw">def</span> <span class="fn">increment</span>():
+    <span class="kw">global</span> counter    <span class="cm"># declare intent to modify the global</span>
+    counter += <span class="num">1</span>
+
+<span class="fn">increment</span>()
+<span class="bi">print</span>(counter)   <span class="cm"># → 1</span>
+
+<span class="cm"># nonlocal keyword — modify an enclosing variable</span>
+<span class="kw">def</span> <span class="fn">make_counter</span>():
+    count = <span class="num">0</span>
+    <span class="kw">def</span> <span class="fn">increment</span>():
+        <span class="kw">nonlocal</span> count   <span class="cm"># reach into the enclosing scope</span>
+        count += <span class="num">1</span>
+        <span class="ret">return</span> count
+    <span class="ret">return</span> increment</pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      When Python looks up a name, it searches in this exact order: <strong>L</strong> — the local function scope first. <strong>E</strong> — any enclosing function scopes (for nested functions). <strong>G</strong> — the module-level global scope. <strong>B</strong> — Python's built-ins like <code>print</code>, <code>len</code>, <code>range</code>.
+      <br><br>
+      The <code>global</code> keyword lets you modify a global variable from inside a function. Use it sparingly — global mutable state is the source of many hard-to-trace bugs. The <code>nonlocal</code> keyword does the same for enclosing scopes — essential for closures that need to mutate a captured variable.
+      <br><br>
+      Now — closures. This is where Python functions become genuinely powerful.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — closures</span>
+    </div>
+    <pre>
+<span class="cm"># Classic closure — a counter factory</span>
+<span class="kw">def</span> <span class="fn">make_counter</span>(start: <span class="tp">int</span> = <span class="num">0</span>):
+    count = start   <span class="cm"># this variable is "closed over"</span>
+
+    <span class="kw">def</span> <span class="fn">increment</span>():
+        <span class="kw">nonlocal</span> count
+        count += <span class="num">1</span>
+        <span class="ret">return</span> count
+
+    <span class="kw">def</span> <span class="fn">decrement</span>():
+        <span class="kw">nonlocal</span> count
+        count -= <span class="num">1</span>
+        <span class="ret">return</span> count
+
+    <span class="kw">def</span> <span class="fn">value</span>():
+        <span class="ret">return</span> count
+
+    <span class="ret">return</span> increment, decrement, value   <span class="cm"># return three functions</span>
+
+
+inc, dec, val = <span class="fn">make_counter</span>(<span class="num">10</span>)
+<span class="fn">inc</span>()   <span class="cm"># → 11</span>
+<span class="fn">inc</span>()   <span class="cm"># → 12</span>
+<span class="fn">dec</span>()   <span class="cm"># → 11</span>
+<span class="fn">val</span>()   <span class="cm"># → 11</span>
+<span class="cm"># make_counter() is long done — but count lives on!</span>
+
+
+<span class="cm"># Real-world: memoization via closure</span>
+<span class="kw">def</span> <span class="fn">memoize</span>(fn):
+    cache = {}   <span class="cm"># persists across calls — that's the closure</span>
+
+    <span class="kw">def</span> <span class="fn">wrapper</span>(*args):
+        <span class="kw">if</span> args <span class="kw">not in</span> cache:
+            cache[args] = <span class="fn">fn</span>(*args)
+        <span class="ret">return</span> cache[args]
+
+    <span class="ret">return</span> wrapper
+
+
+<span class="dec">@memoize</span>
+<span class="kw">def</span> <span class="fn">fibonacci</span>(n: <span class="tp">int</span>) -> <span class="tp">int</span>:
+    <span class="kw">if</span> n <= <span class="num">1</span>:
+        <span class="ret">return</span> n
+    <span class="ret">return</span> <span class="fn">fibonacci</span>(n - <span class="num">1</span>) + <span class="fn">fibonacci</span>(n - <span class="num">2</span>)
+
+<span class="cm"># Or just use Python's built-in:</span>
+<span class="kw">from</span> functools <span class="kw">import</span> lru_cache
+
+<span class="dec">@lru_cache</span>(maxsize=<span class="kw">None</span>)
+<span class="kw">def</span> <span class="fn">fib_fast</span>(n: <span class="tp">int</span>) -> <span class="tp">int</span>:
+    <span class="kw">if</span> n <= <span class="num">1</span>: <span class="ret">return</span> n
+    <span class="ret">return</span> <span class="fn">fib_fast</span>(n-<span class="num">1</span>) + <span class="fn">fib_fast</span>(n-<span class="num">2</span>)</pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      A closure is a function that remembers variables from its enclosing scope — even after that enclosing function has finished executing. The inner functions <code>increment</code>, <code>decrement</code>, and <code>value</code> all share the same <code>count</code> variable. It's private state. Nobody outside can touch <code>count</code> directly.
+      <br><br>
+      The memoize closure is a real engineering tool. The <code>cache</code> dictionary lives inside the closure — it persists across every call to <code>wrapper</code>. That's exactly why memoization works. Python's standard library ships <code>functools.lru_cache</code> which does this professionally, with a configurable size limit and cache statistics. Use it.
+      <br><br>
+      Notice the <code>@memoize</code> syntax on the fibonacci function. That's a <strong>decorator</strong> — we're wrapping our memoize closure around fibonacci. Chapter 8 goes deep on decorators. For now: <code>@memoize</code> before a <code>def</code> is exactly the same as writing <code>fibonacci = memoize(fibonacci)</code> after it.
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══ CH 06 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Six</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">06</span>
+    <h2 class="section-title">First-Class Functions & Lambdas</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      In Python, functions are objects. Full stop. They have attributes, they can be stored in lists, passed as arguments, returned from other functions. This is what "first-class citizen" means in a language — and Python's entire functional programming toolkit is built on this.
+    </div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — functions as first-class objects</span>
+    </div>
+    <pre>
+<span class="cm"># Functions have attributes — they are real objects</span>
+<span class="kw">def</span> <span class="fn">greet</span>(name): <span class="ret">return</span> <span class="str">f"Hello, {name}"</span>
+
+<span class="bi">print</span>(greet.<span class="fn">__name__</span>)    <span class="cm"># → "greet"</span>
+<span class="bi">print</span>(greet.<span class="fn">__doc__</span>)     <span class="cm"># → docstring</span>
+<span class="bi">print</span>(<span class="bi">type</span>(greet))       <span class="cm"># → &lt;class 'function'&gt;</span>
+
+
+<span class="cm"># 1. Stored in a data structure</span>
+operations = {
+    <span class="str">"add"</span>: <span class="kw">lambda</span> a, b: a + b,
+    <span class="str">"sub"</span>: <span class="kw">lambda</span> a, b: a - b,
+    <span class="str">"mul"</span>: <span class="kw">lambda</span> a, b: a * b,
+}
+operations[<span class="str">"add"</span>](<span class="num">3</span>, <span class="num">4</span>)   <span class="cm"># → 7</span>
+
+
+<span class="cm"># 2. Passed as an argument (Higher-Order Functions)</span>
+<span class="kw">def</span> <span class="fn">apply_to_all</span>(items: <span class="tp">list</span>, transform) -> <span class="tp">list</span>:
+    <span class="ret">return</span> [<span class="fn">transform</span>(item) <span class="kw">for</span> item <span class="kw">in</span> items]
+
+<span class="fn">apply_to_all</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>], <span class="kw">lambda</span> x: x ** <span class="num">2</span>)   <span class="cm"># → [1, 4, 9]</span>
+
+
+<span class="cm"># 3. Returned from a function (function factory)</span>
+<span class="kw">def</span> <span class="fn">multiplier</span>(factor: <span class="tp">float</span>):
+    <span class="ret">return</span> <span class="kw">lambda</span> n: n * factor   <span class="cm"># returns a new function</span>
+
+double = <span class="fn">multiplier</span>(<span class="num">2</span>)
+triple = <span class="fn">multiplier</span>(<span class="num">3</span>)
+<span class="fn">double</span>(<span class="num">5</span>)   <span class="cm"># → 10</span>
+<span class="fn">triple</span>(<span class="num">5</span>)   <span class="cm"># → 15</span>
+
+
+<span class="cm"># 4. The Python Big Three — map, filter, functools.reduce</span>
+<span class="kw">from</span> functools <span class="kw">import</span> reduce
+
+nums = [<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>]
+
+<span class="cm"># map — transform every element</span>
+<span class="bi">list</span>(<span class="bi">map</span>(<span class="kw">lambda</span> n: n * <span class="num">2</span>, nums))    <span class="cm"># → [2, 4, 6, 8, 10]</span>
+
+<span class="cm"># filter — keep elements matching condition</span>
+<span class="bi">list</span>(<span class="bi">filter</span>(<span class="kw">lambda</span> n: n % <span class="num">2</span> == <span class="num">0</span>, nums))  <span class="cm"># → [2, 4]</span>
+
+<span class="cm"># reduce — combine all into one value</span>
+<span class="fn">reduce</span>(<span class="kw">lambda</span> acc, n: acc + n, nums)  <span class="cm"># → 15</span>
+
+<span class="cm"># Pythonic alternative: list comprehensions are often preferred</span>
+[n * <span class="num">2</span> <span class="kw">for</span> n <span class="kw">in</span> nums]              <span class="cm"># → [2, 4, 6, 8, 10]</span>
+[n <span class="kw">for</span> n <span class="kw">in</span> nums <span class="kw">if</span> n % <span class="num">2</span> == <span class="num">0</span>]   <span class="cm"># → [2, 4]</span>
+<span class="bi">sum</span>(nums)                          <span class="cm"># → 15</span></pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Python has <code>map</code>, <code>filter</code>, and <code>reduce</code> — but here's the Python-specific nuance: list comprehensions and generator expressions are often more Pythonic than <code>map</code> and <code>filter</code>. They're more readable to most Python developers. Know both. Use comprehensions for simple transforms, <code>map</code>/<code>filter</code> when passing a named function that already exists.
+      <br><br>
+      The function factory pattern — returning a function from a function — is massive. <code>multiplier(2)</code> returns a brand new function that remembers the <code>factor</code> via closure. You can generate infinite specific functions from one general factory. This is how Flask route handlers work. How Click command decorators work. How partial functions in <code>functools</code> work.
+      <br><br>
+      Lambda expressions in Python: single expression, no statements, no <code>return</code> keyword needed. The expression IS the return value. They're ideal as inline arguments to <code>sort</code>, <code>map</code>, <code>filter</code>. They're bad for anything more complex — use a named <code>def</code> instead. Readable code matters more than saving two lines.
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-label">💡 functools.partial</div>
+    Python's <code>functools.partial</code> is the standard library version of a function factory. It pre-fills some arguments and returns a new callable. <code>double = partial(multiply, factor=2)</code>. Use it instead of writing wrapper lambdas manually.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — functools.partial</span>
+    </div>
+    <pre>
+<span class="kw">from</span> functools <span class="kw">import</span> partial
+
+<span class="kw">def</span> <span class="fn">power</span>(base: <span class="tp">float</span>, exponent: <span class="tp">float</span>) -> <span class="tp">float</span>:
+    <span class="ret">return</span> base ** exponent
+
+square = <span class="fn">partial</span>(power, exponent=<span class="num">2</span>)
+cube   = <span class="fn">partial</span>(power, exponent=<span class="num">3</span>)
+
+<span class="fn">square</span>(<span class="num">4</span>)   <span class="cm"># → 16</span>
+<span class="fn">cube</span>(<span class="num">3</span>)     <span class="cm"># → 27</span>
+
+<span class="cm"># Real use: pre-configure print for logging</span>
+<span class="kw">import</span> sys
+error_print = <span class="fn">partial</span>(<span class="bi">print</span>, file=sys.stderr, flush=<span class="kw">True</span>)
+<span class="fn">error_print</span>(<span class="str">"Something went wrong"</span>)   <span class="cm"># prints to stderr</span></pre>
+  </div>
+</div>
+
+
+<!-- ═══ CH 07 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Seven</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">07</span>
+    <h2 class="section-title">Pure Functions & Side Effects</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      This chapter separates engineers who write code that works from engineers who write code that lasts. Pure functions. Side effects. And why the distinction reshapes how you design systems at scale.
+    </div>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">📐 Definition</div>
+    A <strong>pure function</strong>: (1) given the same inputs, always returns the same output, and (2) causes no observable side effects. Two rules. Enormous architectural consequences.
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — pure vs impure</span>
+    </div>
+    <pre>
+<span class="cm"># ✅ PURE — deterministic, no side effects</span>
+<span class="kw">def</span> <span class="fn">add</span>(a: <span class="tp">float</span>, b: <span class="tp">float</span>) -> <span class="tp">float</span>:
+    <span class="ret">return</span> a + b
+
+<span class="kw">def</span> <span class="fn">format_price</span>(cents: <span class="tp">int</span>) -> <span class="tp">str</span>:
+    <span class="ret">return</span> <span class="str">f"${cents / 100:.2f}"</span>
+
+<span class="kw">def</span> <span class="fn">get_evens</span>(numbers: <span class="tp">list</span>[<span class="tp">int</span>]) -> <span class="tp">list</span>[<span class="tp">int</span>]:
+    <span class="ret">return</span> [n <span class="kw">for</span> n <span class="kw">in</span> numbers <span class="kw">if</span> n % <span class="num">2</span> == <span class="num">0</span>]
+
+
+<span class="cm"># ❌ IMPURE — depends on external state</span>
+TAX_RATE = <span class="num">0.08</span>
+
+<span class="kw">def</span> <span class="fn">calculate_tax_bad</span>(price: <span class="tp">float</span>) -> <span class="tp">float</span>:
+    <span class="ret">return</span> price * TAX_RATE   <span class="cm"># result changes if TAX_RATE changes!</span>
+
+<span class="cm"># ✅ PURE version — pass the rate as a parameter</span>
+<span class="kw">def</span> <span class="fn">calculate_tax</span>(price: <span class="tp">float</span>, rate: <span class="tp">float</span>) -> <span class="tp">float</span>:
+    <span class="ret">return</span> price * rate
+
+
+<span class="cm"># ❌ IMPURE — mutates its input (list is mutable!)</span>
+<span class="kw">def</span> <span class="fn">add_item_bad</span>(cart: <span class="tp">list</span>, item: <span class="tp">str</span>) -> <span class="tp">list</span>:
+    cart.<span class="fn">append</span>(item)   <span class="cm"># modifies the original list — side effect!</span>
+    <span class="ret">return</span> cart
+
+<span class="cm"># ✅ PURE version — return a new list, original untouched</span>
+<span class="kw">def</span> <span class="fn">add_item</span>(cart: <span class="tp">list</span>[<span class="tp">str</span>], item: <span class="tp">str</span>) -> <span class="tp">list</span>[<span class="tp">str</span>]:
+    <span class="ret">return</span> [*cart, item]   <span class="cm"># or: cart + [item]</span>
+
+
+<span class="cm"># ❌ IMPURE — I/O, file writes, network calls</span>
+<span class="kw">def</span> <span class="fn">impure_get_user</span>(user_id: <span class="tp">int</span>):
+    <span class="bi">print</span>(<span class="str">f"Fetching user {user_id}"</span>)     <span class="cm"># I/O — side effect</span>
+    <span class="cm"># requests.get(...)                  ← network — side effect</span>
+    <span class="cm"># open("log.txt", "a").write(...)    ← file write — side effect</span>
+    <span class="kw">pass</span></pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Python lists are mutable — this is the most common source of impurity in Python code. When you <code>.append()</code> inside a function, you're silently mutating the caller's list. Any other code holding a reference to that same list now has a different list without knowing why. Use list concatenation or spread to return a new list instead.
+      <br><br>
+      Side effects aren't evil — they're necessary. Network calls, database writes, printing to the console — these are the whole point of most programs. The principle is to <em>isolate</em> them. Keep data transformation logic in pure functions, push side effects to the system's edges. This is the foundation of testable, reliable Python code.
+      <br><br>
+      Pure functions are trivially testable — you need no mocks, no fixtures, no patching. Just call the function with inputs and assert the output. Pure functions are cacheable with <code>lru_cache</code>. Pure functions compose elegantly. And bugs in pure functions are almost always caused by the inputs — which makes them dramatically easier to debug.
+    </div>
+  </div>
+
+  <table class="compare-table">
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>Pure Function</th>
+        <th>Impure Function</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Testability</td>
+        <td><span class="tag good">Easy</span> — no mocks needed</td>
+        <td><span class="tag warn">Hard</span> — requires mock/patch</td>
+      </tr>
+      <tr>
+        <td>Predictability</td>
+        <td><span class="tag good">Deterministic</span></td>
+        <td><span class="tag warn">Depends on global state</span></td>
+      </tr>
+      <tr>
+        <td>Cacheability</td>
+        <td><span class="tag good">Safe with lru_cache</span></td>
+        <td><span class="tag warn">Cannot safely cache</span></td>
+      </tr>
+      <tr>
+        <td>Debugging</td>
+        <td><span class="tag good">Easy — inspect inputs</span></td>
+        <td><span class="tag warn">Must trace full context</span></td>
+      </tr>
+      <tr>
+        <td>Python tool</td>
+        <td><code>functools.lru_cache</code></td>
+        <td><code>unittest.mock.patch</code></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
+<!-- ═══ CH 08 ═══ -->
+<div class="chapter-divider"><span class="chapter-label">Chapter Eight</span></div>
+<div class="section">
+  <div class="section-header">
+    <span class="section-num">08</span>
+    <h2 class="section-title">Decorators, Async & Advanced Patterns</h2>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera</div>
+    <div class="script-content">
+      You now understand Python functions deeply. This final chapter covers four advanced patterns that define professional Python code — decorators, async coroutines, generators, and function composition with functools. Let's go.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label on-screen"><span class="indicator"></span> On-Screen Text</div>
+    <div class="script-content">Show bold title: <strong>Pattern 1: Decorators</strong></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — decorators from scratch</span>
+    </div>
+    <pre>
+<span class="kw">import</span> time
+<span class="kw">import</span> functools
+
+<span class="cm"># A decorator is just a function that wraps another function</span>
+<span class="kw">def</span> <span class="fn">timer</span>(func):
+    <span class="dec">@functools.wraps</span>(func)   <span class="cm"># preserve original function metadata</span>
+    <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+        start = time.<span class="fn">perf_counter</span>()
+        result = <span class="fn">func</span>(*args, **kwargs)   <span class="cm"># call the original</span>
+        end = time.<span class="fn">perf_counter</span>()
+        <span class="bi">print</span>(<span class="str">f"{func.__name__} took {end - start:.4f}s"</span>)
+        <span class="ret">return</span> result
+    <span class="ret">return</span> wrapper
+
+
+<span class="dec">@timer</span>                     <span class="cm"># ← sugar for: expensive = timer(expensive)</span>
+<span class="kw">def</span> <span class="fn">expensive_operation</span>(n: <span class="tp">int</span>) -> <span class="tp">int</span>:
+    time.<span class="fn">sleep</span>(<span class="num">0.1</span>)
+    <span class="ret">return</span> n ** <span class="num">2</span>
+
+<span class="fn">expensive_operation</span>(<span class="num">5</span>)   <span class="cm"># prints: expensive_operation took 0.1001s → 25</span>
+
+
+<span class="cm"># Decorator with arguments — requires an extra layer</span>
+<span class="kw">def</span> <span class="fn">retry</span>(max_attempts: <span class="tp">int</span> = <span class="num">3</span>, delay: <span class="tp">float</span> = <span class="num">1.0</span>):
+    <span class="kw">def</span> <span class="fn">decorator</span>(func):
+        <span class="dec">@functools.wraps</span>(func)
+        <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):
+            <span class="kw">for</span> attempt <span class="kw">in</span> <span class="bi">range</span>(max_attempts):
+                <span class="kw">try</span>:
+                    <span class="ret">return</span> <span class="fn">func</span>(*args, **kwargs)
+                <span class="kw">except</span> Exception <span class="kw">as</span> e:
+                    <span class="kw">if</span> attempt == max_attempts - <span class="num">1</span>:
+                        <span class="kw">raise</span>
+                    time.<span class="fn">sleep</span>(delay)
+        <span class="ret">return</span> wrapper
+    <span class="ret">return</span> decorator
+
+
+<span class="dec">@retry</span>(max_attempts=<span class="num">3</span>, delay=<span class="num">0.5</span>)
+<span class="kw">def</span> <span class="fn">fetch_data</span>(url: <span class="tp">str</span>) -> <span class="tp">dict</span>:
+    <span class="cm"># will retry up to 3 times on any exception</span>
+    <span class="kw">pass</span>
+
+
+<span class="cm"># Stacking decorators — applied bottom-up</span>
+<span class="dec">@timer</span>
+<span class="dec">@retry</span>(max_attempts=<span class="num">2</span>)
+<span class="kw">def</span> <span class="fn">reliable_fetch</span>(url: <span class="tp">str</span>) -> <span class="tp">dict</span>:
+    <span class="kw">pass</span>
+<span class="cm"># equivalent to: timer(retry(2)(reliable_fetch))</span></pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Decorators are Python's killer feature for cross-cutting concerns — logging, timing, retry logic, authentication, caching, rate limiting. They wrap a function with additional behavior without modifying its source code.
+      <br><br>
+      Three rules for writing decorators correctly. One: always use <code>*args, **kwargs</code> in the wrapper so it accepts any signature. Two: always <code>return</code> the result of calling the original function — unless you specifically want to suppress it. Three: always apply <code>@functools.wraps(func)</code> to the wrapper — without it, your wrapped function loses its <code>__name__</code>, <code>__doc__</code>, and other metadata, which breaks introspection, debugging, and docs generation.
+      <br><br>
+      Decorators with arguments need an extra layer of nesting. The outer function receives the arguments. It returns a decorator. The decorator receives the function. It returns the wrapper. Three levels. Once you've written one, the pattern clicks permanently.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label on-screen"><span class="indicator"></span> On-Screen Text</div>
+    <div class="script-content">Show bold title: <strong>Pattern 2: Async Coroutines with asyncio</strong></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — async functions (coroutines)</span>
+    </div>
+    <pre>
+<span class="kw">import</span> asyncio
+<span class="kw">import</span> aiohttp
+
+<span class="cm"># async def defines a coroutine — an asynchronous function</span>
+<span class="kw">async def</span> <span class="fn">fetch_user</span>(session: aiohttp.ClientSession, user_id: <span class="tp">int</span>) -> <span class="tp">dict</span>:
+    <span class="str">"""Fetch a user from the API asynchronously."""</span>
+    <span class="kw">try</span>:
+        <span class="kw">async with</span> session.<span class="fn">get</span>(<span class="str">f"/api/users/{user_id}"</span>) <span class="kw">as</span> response:
+            response.<span class="fn">raise_for_status</span>()
+            <span class="ret">return</span> <span class="kw">await</span> response.<span class="fn">json</span>()   <span class="cm"># await pauses here, not the process</span>
+    <span class="kw">except</span> aiohttp.ClientError <span class="kw">as</span> e:
+        <span class="bi">print</span>(<span class="str">f"fetch_user failed: {e}"</span>)
+        <span class="kw">raise</span>
+
+
+<span class="cm"># Fetch multiple users concurrently — massive performance win</span>
+<span class="kw">async def</span> <span class="fn">fetch_all_users</span>(user_ids: <span class="tp">list</span>[<span class="tp">int</span>]) -> <span class="tp">list</span>[<span class="tp">dict</span>]:
+    <span class="kw">async with</span> aiohttp.<span class="fn">ClientSession</span>() <span class="kw">as</span> session:
+        tasks = [<span class="fn">fetch_user</span>(session, uid) <span class="kw">for</span> uid <span class="kw">in</span> user_ids]
+        <span class="ret">return</span> <span class="kw">await</span> asyncio.<span class="fn">gather</span>(*tasks)   <span class="cm"># run all concurrently</span>
+
+
+<span class="cm"># Entry point — run the event loop</span>
+<span class="kw">async def</span> <span class="fn">main</span>():
+    users = <span class="kw">await</span> <span class="fn">fetch_all_users</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>, <span class="num">4</span>, <span class="num">5</span>])
+    <span class="bi">print</span>(<span class="str">f"Fetched {len(users)} users"</span>)
+
+asyncio.<span class="fn">run</span>(<span class="fn">main</span>())   <span class="cm"># Python 3.7+ entry point</span>
+
+
+<span class="cm"># asyncio.gather vs asyncio.create_task</span>
+<span class="kw">async def</span> <span class="fn">controlled</span>():
+    task1 = asyncio.<span class="fn">create_task</span>(<span class="fn">fetch_user</span>(session, <span class="num">1</span>))
+    task2 = asyncio.<span class="fn">create_task</span>(<span class="fn">fetch_user</span>(session, <span class="num">2</span>))
+    <span class="cm"># tasks start immediately, can cancel independently</span>
+    user1 = <span class="kw">await</span> task1
+    user2 = <span class="kw">await</span> task2</pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      <code>async def</code> defines a coroutine. Calling it doesn't run it — it returns a coroutine object. You need <code>await</code> to actually execute it. <code>await</code> yields control back to the event loop while waiting — allowing other coroutines to run. This is cooperative multitasking, not threads.
+      <br><br>
+      <code>asyncio.gather()</code> is the key to concurrent I/O in Python. Pass it a list of coroutines and it runs them all simultaneously, returning results in order. Five sequential HTTP requests that each take one second become five concurrent requests that finish in roughly one second total. That's the power of async.
+      <br><br>
+      Critical rule: you can only <code>await</code> inside an <code>async def</code>. And an async function must eventually be run by an event loop — either via <code>asyncio.run()</code> at the top level, or by being awaited from another coroutine. The entire call chain must be async-aware.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label on-screen"><span class="indicator"></span> On-Screen Text</div>
+    <div class="script-content">Show bold title: <strong>Pattern 3: Generators — Lazy Functions</strong></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — generator functions</span>
+    </div>
+    <pre>
+<span class="cm"># yield turns a function into a generator</span>
+<span class="kw">def</span> <span class="fn">count_up</span>(start: <span class="tp">int</span>, end: <span class="tp">int</span>):
+    <span class="str">"""Yield integers from start to end (inclusive)."""</span>
+    <span class="kw">while</span> start <= end:
+        <span class="kw">yield</span> start   <span class="cm"># pause, emit value, resume on next()</span>
+        start += <span class="num">1</span>
+
+<span class="kw">for</span> n <span class="kw">in</span> <span class="fn">count_up</span>(<span class="num">1</span>, <span class="num">5</span>):
+    <span class="bi">print</span>(n)   <span class="cm"># → 1, 2, 3, 4, 5 — one at a time, not all at once</span>
+
+
+<span class="cm"># Infinite generator — memory is never a problem</span>
+<span class="kw">def</span> <span class="fn">fibonacci</span>():
+    a, b = <span class="num">0</span>, <span class="num">1</span>
+    <span class="kw">while</span> <span class="kw">True</span>:
+        <span class="kw">yield</span> a
+        a, b = b, a + b
+
+<span class="kw">import</span> itertools
+first_10 = <span class="bi">list</span>(itertools.<span class="fn">islice</span>(<span class="fn">fibonacci</span>(), <span class="num">10</span>))
+<span class="cm"># → [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]</span>
+
+
+<span class="cm"># Generator expressions — lazy list comprehensions</span>
+<span class="cm"># This reads a 10GB file line by line — never loads all into memory</span>
+<span class="kw">def</span> <span class="fn">read_large_file</span>(path: <span class="tp">str</span>):
+    <span class="kw">with</span> <span class="bi">open</span>(path) <span class="kw">as</span> f:
+        <span class="kw">for</span> line <span class="kw">in</span> f:
+            <span class="kw">yield</span> line.<span class="fn">strip</span>()
+
+<span class="cm"># Process without loading everything</span>
+errors = (line <span class="kw">for</span> line <span class="kw">in</span> <span class="fn">read_large_file</span>(<span class="str">"app.log"</span>) <span class="kw">if</span> <span class="str">"ERROR"</span> <span class="kw">in</span> line)
+<span class="kw">for</span> error <span class="kw">in</span> errors:
+    <span class="bi">print</span>(error)</pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Generator functions use <code>yield</code> instead of <code>return</code>. When called, they return a generator object — nothing runs yet. Each call to <code>next()</code> on it runs the function until the next <code>yield</code>, emits that value, and pauses. This is lazy evaluation — values are produced on demand.
+      <br><br>
+      Why does this matter? Memory. A list of a billion numbers requires gigabytes. A generator that produces a billion numbers requires constant, tiny memory — because only one number exists at a time. For processing large files, database cursors, streaming data, or infinite sequences, generators are the professional tool.
+      <br><br>
+      Generator expressions are like list comprehensions but with parentheses instead of square brackets. They're lazy. <code>[x*2 for x in range(1_000_000)]</code> creates a million-item list in memory instantly. <code>(x*2 for x in range(1_000_000))</code> is a generator that computes each value only when asked.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label on-screen"><span class="indicator"></span> On-Screen Text</div>
+    <div class="script-content">Show bold title: <strong>Pattern 4: Function Composition with functools</strong></div>
+  </div>
+
+  <div class="code-block">
+    <div class="code-header">
+      <div class="code-dots"><span></span><span></span><span></span></div>
+      <span class="code-lang">python — composition & functools</span>
+    </div>
+    <pre>
+<span class="kw">from</span> functools <span class="kw">import</span> reduce
+
+<span class="cm"># Build a pipe / compose utility in pure Python</span>
+<span class="kw">def</span> <span class="fn">pipe</span>(*funcs):
+    <span class="str">"""Apply functions left-to-right: pipe(f, g, h)(x) == h(g(f(x)))"""</span>
+    <span class="ret">return</span> <span class="kw">lambda</span> x: <span class="fn">reduce</span>(<span class="kw">lambda</span> v, f: <span class="fn">f</span>(v), funcs, x)
+
+
+<span class="cm"># Small, focused, pure functions</span>
+trim       = <span class="tp">str</span>.<span class="fn">strip</span>
+lowercase  = <span class="tp">str</span>.<span class="fn">lower</span>
+<span class="kw">def</span> <span class="fn">slugify</span>(s: <span class="tp">str</span>) -> <span class="tp">str</span>:
+    <span class="kw">import</span> re
+    <span class="ret">return</span> re.<span class="fn">sub</span>(<span class="str">r'\s+'</span>, <span class="str">'-'</span>, s)
+
+to_slug = <span class="fn">pipe</span>(trim, lowercase, slugify)
+<span class="fn">to_slug</span>(<span class="str">"  Hello World  "</span>)   <span class="cm"># → "hello-world"</span>
+
+
+<span class="cm"># functools.reduce for custom aggregation</span>
+<span class="kw">def</span> <span class="fn">deep_merge</span>(dicts: <span class="tp">list</span>[<span class="tp">dict</span>]) -> <span class="tp">dict</span>:
+    <span class="ret">return</span> <span class="fn">reduce</span>(<span class="kw">lambda</span> acc, d: {**acc, **d}, dicts, {})
+
+<span class="fn">deep_merge</span>([{<span class="str">"a"</span>: <span class="num">1</span>}, {<span class="str">"b"</span>: <span class="num">2</span>}, {<span class="str">"c"</span>: <span class="num">3</span>}])
+<span class="cm"># → {"a": 1, "b": 2, "c": 3}</span>
+
+
+<span class="cm"># Currying in Python — via partial or manual</span>
+<span class="kw">from</span> functools <span class="kw">import</span> partial
+
+<span class="kw">def</span> <span class="fn">add_tax</span>(price: <span class="tp">float</span>, rate: <span class="tp">float</span>) -> <span class="tp">float</span>:
+    <span class="ret">return</span> price * (<span class="num">1</span> + rate)
+
+uk_tax = <span class="fn">partial</span>(add_tax, rate=<span class="num">0.20</span>)    <span class="cm"># pre-fill rate</span>
+us_tax = <span class="fn">partial</span>(add_tax, rate=<span class="num">0.08</span>)
+
+<span class="fn">uk_tax</span>(<span class="num">100</span>)   <span class="cm"># → 120.0</span>
+<span class="fn">us_tax</span>(<span class="num">100</span>)   <span class="cm"># → 108.0</span>
+
+
+<span class="cm"># Real-world pipeline: data processing chain</span>
+<span class="kw">from</span> typing <span class="kw">import</span> Callable
+
+<span class="kw">def</span> <span class="fn">build_pipeline</span>(*steps: Callable) -> Callable:
+    <span class="str">"""Compose a sequence of data-transform functions."""</span>
+    <span class="ret">return</span> <span class="kw">lambda</span> data: <span class="fn">reduce</span>(<span class="kw">lambda</span> d, step: <span class="fn">step</span>(d), steps, data)
+
+process = <span class="fn">build_pipeline</span>(
+    <span class="kw">lambda</span> data: [row <span class="kw">for</span> row <span class="kw">in</span> data <span class="kw">if</span> row[<span class="str">"active"</span>]],   <span class="cm"># filter</span>
+    <span class="kw">lambda</span> data: [{**row, <span class="str">"tax"</span>: <span class="fn">uk_tax</span>(row[<span class="str">"price"</span>])} <span class="kw">for</span> row <span class="kw">in</span> data],  <span class="cm"># enrich</span>
+    <span class="kw">lambda</span> data: <span class="fn">sorted</span>(data, key=<span class="kw">lambda</span> r: r[<span class="str">"price"</span>])   <span class="cm"># sort</span>
+)
+
+result = <span class="fn">process</span>(raw_data)</pre>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — Voiceover</div>
+    <div class="script-content">
+      Python doesn't have a built-in pipe operator like some languages, but building one with <code>functools.reduce</code> takes five lines. Data flows through each function left to right. Each function is small, pure, and testable in isolation. Complex behavior emerges from their combination.
+      <br><br>
+      Note that Python's method references — like <code>str.strip</code> and <code>str.lower</code> — are themselves callables. You can pass them directly into a pipeline without wrapping in a lambda. This is Python at its most elegant.
+      <br><br>
+      The data processing pipeline at the bottom is what production ETL code looks like when built functionally. Filter active records. Enrich with computed fields. Sort the result. Three pure steps, zero shared state, fully composable, fully testable.
+    </div>
+  </div>
+
+  <!-- OUTRO -->
+  <div class="script-block">
+    <div class="script-label direction"><span class="indicator"></span> Direction — Outro Sequence</div>
+    <div class="script-content direction-text">
+      Cut back to presenter on camera. Relaxed, warm close. Python logo or code in the background. Summarise on a visible slide or whiteboard behind them.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label narration"><span class="indicator"></span> Narration — On Camera (Outro)</div>
+    <div class="script-content">
+      Let's bring it home. Functions in Python are not just syntax — they're the primary tool for managing complexity. Every module, every library, every framework you use in Python is built on function calls.
+      <br><br>
+      Here's what you now own. The complete anatomy of a Python function with type hints and docstrings. All six parameter kinds — positional, default, *args, keyword-only, **kwargs, and positional-only. Return patterns including multiple return values, guard clauses, and Optional types. The LEGB scope rule and how closures capture enclosing state with <code>nonlocal</code>. First-class functions, lambdas, <code>functools.partial</code>, map, filter, reduce. Pure function principles and the mutation traps specific to Python's mutable objects. And the advanced patterns: decorators with <code>functools.wraps</code>, async coroutines with <code>asyncio</code>, generators with <code>yield</code>, and functional pipelines with composition.
+      <br><br>
+      The only thing left is to apply this. Open your editor. Write a decorator that logs every function call. Write a generator that reads a large file lazily. Compose three pure functions into a data pipeline. Build it. The concepts live in the code you write, not the video you watch.
+      <br><br>
+      If this gave you value, subscribe — there's a full Python series coming on object-oriented design, async architecture, and building production APIs. Drop a comment: which of the six parameter kinds was new to you?
+      <br><br>
+      See you in the next one.
+    </div>
+  </div>
+
+  <div class="script-block">
+    <div class="script-label direction"><span class="indicator"></span> Direction — End Card</div>
+    <div class="script-content direction-text">
+      Hold on presenter for 2 seconds. Fade to end screen. Show next video recommendation, subscribe animation, comment CTA. Outro music at 30% volume, slow fade in.
+    </div>
+  </div>
+</div>
+
+<footer>
+  <p>Full Script — Functions in Python &nbsp;|&nbsp; <span>Senior Engineer Series</span> &nbsp;|&nbsp; Runtime ~45 min</p>
+  <p style="margin-top:8px; font-size:0.6rem; color: #374151;">8 chapters · Python 3.10+ · Decorators · Async · Generators · functools · Full direction cues</p>
+</footer>
+
+</body>
+</html>

@@ -10,6 +10,7 @@ import { useParams } from 'react-router-dom';
 import {
   Send, Upload, ThumbsUp, ThumbsDown, Bot, User,
   FileText, X, MessageSquare, ChevronDown, Cpu, RefreshCw,
+  Clock, Activity, Zap, AlertCircle, Settings2, Search, Fingerprint, Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api, WS_URL } from '../api';
@@ -254,6 +255,93 @@ const ModelSelector = ({ selectedModel, onModelChange, models, loadingModels, on
   );
 };
 
+const SearchTuning = ({ searchType, setSearchType, rerankEnabled, setRerankEnabled }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="glass-effect"
+        style={{
+          display: 'flex', alignItems: 'center', gap: '8px',
+          padding: '8px 14px', borderRadius: '10px', fontSize: '13px',
+          fontWeight: '500', color: searchType === 'hybrid' || rerankEnabled ? 'var(--primary)' : 'var(--text)',
+          border: '1px solid var(--border)', cursor: 'pointer',
+        }}
+      >
+        <Settings2 size={15} />
+        Retrieval
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -6, scale: 0.97 }}
+            style={{
+              position: 'absolute', top: 'calc(100% + 8px)', right: 0,
+              minWidth: '240px', background: 'var(--bg)',
+              border: '1px solid var(--border)', borderRadius: '14px',
+              padding: '12px', boxShadow: '0 16px 40px rgba(0,0,0,0.25)', zIndex: 50,
+            }}
+          >
+            <div style={{ fontSize: '10px', fontWeight: '800', color: 'var(--text-dim)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '12px' }}>
+              Advanced Retrieval Strategies
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div 
+                onClick={() => setSearchType(searchType === 'dense' ? 'hybrid' : 'dense')}
+                className="glass-effect"
+                style={{
+                  padding: '10px', borderRadius: '10px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  background: searchType === 'hybrid' ? 'rgba(var(--primary-rgb), 0.1)' : 'transparent',
+                  borderColor: searchType === 'hybrid' ? 'var(--primary)' : 'var(--border)'
+                }}
+              >
+                <Search size={16} color={searchType === 'hybrid' ? 'var(--primary)' : 'var(--text-dim)'} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>Hybrid Search</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Semantic + Keyword (BM25)</div>
+                </div>
+                <div style={{ width: '12px', height: '12px', border: '2px solid var(--primary)', borderRadius: '50%', background: searchType === 'hybrid' ? 'var(--primary)' : 'transparent' }} />
+              </div>
+
+              <div 
+                onClick={() => setRerankEnabled(!rerankEnabled)}
+                className="glass-effect"
+                style={{
+                  padding: '10px', borderRadius: '10px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  background: rerankEnabled ? 'rgba(16, 185, 129, 0.1)' : 'transparent',
+                  borderColor: rerankEnabled ? '#10b981' : 'var(--border)'
+                }}
+              >
+                <Sparkles size={16} color={rerankEnabled ? '#10b981' : 'var(--text-dim)'} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '13px', fontWeight: '600' }}>AI Reranking</div>
+                  <div style={{ fontSize: '10px', color: 'var(--text-dim)' }}>Cross-Encoder verification</div>
+                </div>
+                <div style={{ width: '12px', height: '12px', border: '2px solid #10b981', borderRadius: '50%', background: rerankEnabled ? '#10b981' : 'transparent' }} />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
 // ── Main component ─────────────────────────────────────────────────────────
 const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
   const { sessionId } = useParams();
@@ -266,12 +354,15 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
   const [selectedModel, setSelectedModel]       = useState('llama3');
   const [availableModels, setAvailableModels]   = useState(FALLBACK_MODELS);
   const [loadingModels, setLoadingModels]       = useState(false);
+  const [searchType, setSearchType]             = useState('hybrid');
+  const [rerankEnabled, setRerankEnabled]       = useState(true);
   const scrollRef  = useRef(null);
   const fileInputRef = useRef(null);
   const [logs, setLogs] = useState([]);
   const clientId = useRef(Math.random().toString(36).substring(7)).current;
   const ws = useRef(null);
   const sessionCreationPromise = useRef(null);
+  const [error, setError] = useState(null);
 
   const currentModelLabel = availableModels.find(m => m.id === selectedModel)?.label || selectedModel || 'AI';
 
@@ -364,7 +455,7 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
 
     try {
       await ensureSessionExists();
-      await api.askQuestion(sessionId, userMsg, selectedModel);
+      await api.askQuestion(sessionId, userMsg, selectedModel, searchType, rerankEnabled);
       await fetchMessages();
     } catch (err) {
       console.error('Failed to send message', err);
@@ -382,25 +473,33 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
     const file = e.target.files[0];
     if (!file) return;
     setUploading(true);
+    setError(null);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('engine', 'fitz');
-    formData.append('ocr', 'true');
+    formData.append('ocr', 'false'); // Default to false for better UX, user can use Advanced for OCR
     try {
       await ensureSessionExists();
       setLogs(['Initializing parsing pipeline…']);
       formData.append('session_id', sessionId);
       formData.append('client_id', clientId);
       formData.append('auto_chunk', 'true'); // Ensure background vectorization for RAG
-      await api.parseDocument(formData);
+      
+      const res = await api.parseDocument(formData);
+      
+      // Seed with success if it worked
       await api.sendMessage(
         sessionId, 'assistant',
         `✅ **${file.name}** has been processed successfully!\n\nYou can now ask questions about its content.`
       );
+      
       fetchMessages();
       fetchDocuments();
     } catch (err) {
       console.error('Upload failed', err);
+      const errMsg = err.response?.data?.detail || err.message || 'Unknown upload error';
+      setError(`Upload failed: ${errMsg}`);
+      setLogs(prev => [...prev, `ERROR: ${errMsg}`]);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -445,11 +544,48 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
             <FileText size={15} />
             Docs {documents.length > 0 && `(${documents.length})`}
           </button>
+          <SearchTuning 
+            searchType={searchType} 
+            setSearchType={setSearchType}
+            rerankEnabled={rerankEnabled}
+            setRerankEnabled={setRerankEnabled}
+          />
         </div>
       </header>
 
       {/* Messages */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        {/* Error reporting banner */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              style={{
+                background: 'rgba(239, 68, 68, 0.1)',
+                borderBottom: '1px solid rgba(239, 68, 68, 0.2)',
+                padding: '12px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                color: '#ef4444',
+                fontSize: '13px',
+                zIndex: 20
+              }}
+            >
+              <AlertCircle size={16} />
+              <div style={{ flex: 1 }}>{error}</div>
+              <button 
+                onClick={() => setError(null)}
+                style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}
+              >
+                <X size={16} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         <div style={{ position: 'absolute', inset: 0, overflowY: 'auto', padding: '32px 20px' }}>
           <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column' }}>
             {/* 
@@ -476,14 +612,52 @@ const ChatWindow = ({ sessions = [], onRefreshSessions }) => {
                       <div style={{ flex: 1 }}>
                         <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                         {msg.role === 'assistant' && (
-                          <div style={{ marginTop: '12px', display: 'flex', gap: '8px', opacity: 0.6 }}>
-                            <button onClick={() => handleFeedback(msg.id, true)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>
-                              <ThumbsUp size={14} />
-                            </button>
-                            <button onClick={() => handleFeedback(msg.id, false)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>
-                              <ThumbsDown size={14} />
-                            </button>
-                          </div>
+                          <>
+                            {/* Performance metrics footer */}
+                            {(msg.total_latency_ms || msg.prompt_tokens) && (
+                              <div style={{ 
+                                marginTop: '14px', 
+                                padding: '8px 12px',
+                                background: 'rgba(var(--primary-rgb), 0.03)',
+                                borderRadius: '8px',
+                                border: '1px solid var(--border)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                fontSize: '11px',
+                                color: 'var(--text-dim)',
+                                width: 'fit-content'
+                              }}>
+                                {msg.total_latency_ms && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Total processing time">
+                                    <Clock size={12} color="var(--primary)" style={{ opacity: 0.8 }} />
+                                    <span>{(msg.total_latency_ms / 1000).toFixed(2)}s</span>
+                                  </div>
+                                )}
+                                {msg.retrieval_latency_ms !== undefined && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Context retrieval time">
+                                    <Activity size={12} color="#10b981" style={{ opacity: 0.8 }} />
+                                    <span>{msg.retrieval_latency_ms}ms</span>
+                                  </div>
+                                )}
+                                {msg.prompt_tokens && (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }} title="Tokens (Prompt / Completion)">
+                                    <Zap size={12} color="#f59e0b" style={{ opacity: 0.8 }} />
+                                    <span>{msg.prompt_tokens + msg.completion_tokens} tokens</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            <div style={{ marginTop: '12px', display: 'flex', gap: '8px', opacity: 0.6 }}>
+                              <button onClick={() => handleFeedback(msg.id, true)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>
+                                <ThumbsUp size={14} />
+                              </button>
+                              <button onClick={() => handleFeedback(msg.id, false)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer' }}>
+                                <ThumbsDown size={14} />
+                              </button>
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>

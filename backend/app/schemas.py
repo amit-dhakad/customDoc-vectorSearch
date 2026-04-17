@@ -85,12 +85,27 @@ class MessageBase(BaseModel):
 class MessageCreate(MessageBase):
     """Used for sending new messages from the client."""
     model: Optional[str] = None  # e.g. 'llama3' or 'gemma'
+    search_type: Optional[Literal["dense", "hybrid"]] = "hybrid"
+    enable_reranking: Optional[bool] = True
 
 class Message(MessageBase):
     """Serialized message with unique identifier and server-side timestamp."""
     id: int
     session_id: str
     timestamp: datetime
+    
+    # Performance & Evaluation Metrics
+    total_latency_ms: Optional[int] = None
+    retrieval_latency_ms: Optional[int] = None
+    generation_latency_ms: Optional[int] = None
+    prompt_tokens: Optional[int] = None
+    completion_tokens: Optional[int] = None
+    
+    # RAGAS Quality Scores (0.0 - 1.0)
+    faithfulness: Optional[float] = None
+    answer_relevancy: Optional[float] = None
+    context_precision: Optional[float] = None
+    context_recall: Optional[float] = None
 
     class Config:
         from_attributes = True

@@ -1,0 +1,59 @@
+name: CI Tier 1 Build & Test
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test-ml-service:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest fastapi httpx uvicorn[standard] python-multipart psutil sqlalchemy pydantic-settings
+          # Install core ml-service dependencies for testing logic
+          pip install -r ml-service/requirements.txt
+
+      - name: Run Linting (Ruff)
+        run: ruff check ml-service/ backend/
+
+      - name: Run Tests (Pytest)
+        run: |
+          cd ml-service
+          pytest tests/
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: cd frontend && npm install
+      - name: Build Frontend (Check Integrity)
+        run: cd frontend && npm run build
+
+  docker-build-check:
+    runs-on: ubuntu-latest
+    needs: [test-ml-service, test-frontend]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Build ML Service
+        run: docker build -t ml-service-test ./ml-service
+      - name: Build Backend
+        run: docker build -t backend-test ./backend

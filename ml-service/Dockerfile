@@ -39,11 +39,15 @@ RUN ln -sf /usr/bin/python3.10 /usr/bin/python3 \
 # Establish the working directory
 WORKDIR /app
 
+# Standardize pip and increase resilience for large package downloads
+RUN pip install --no-cache-dir --upgrade pip
+
 # Copy and install Python dependencies
 COPY requirements.txt .
 
 # Install PyTorch with CUDA 12.1 first (so other packages pick up GPU-enabled torch)
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cu121
+# We use high timeout and retry counts to survive slow/unstable network connections
+RUN pip install --no-cache-dir --default-timeout=1000 --retries 50 torch --index-url https://download.pytorch.org/whl/cu121
 
 # Install remaining requirements
 RUN pip install --no-cache-dir -r requirements.txt

@@ -117,7 +117,7 @@ async def get_system_stats():
             # Fallback for when ML service is down/offline
             return {
                 "cpu": 0, "memory": 0,
-                "error": str(e)
+                "error": f"{type(e).__name__}: {str(e)}"
             }
 
 @router.post("/parse")

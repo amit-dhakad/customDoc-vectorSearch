@@ -1,0 +1,73 @@
+version: '3.8'
+name: customdoc-prod
+
+services:
+  chromadb:
+    image: chromadb/chroma:latest
+    restart: always
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chroma-data:/chroma/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - customdoc-network
+
+  ml-service:
+    build: 
+      context: ./ml-service
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - customdoc-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - ML_SERVICE_URL=http://ml-service:8000
+      - DB_URL=sqlite:///./sql_app.db
+    depends_on:
+      ml-service:
+        condition: service_healthy
+    networks:
+      - customdoc-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    restart: always
+    depends_on:
+      - backend
+    networks:
+      - customdoc-network
+
+volumes:
+  chroma-data:
+    driver: local
+
+networks:
+  customdoc-network:
+    driver: bridge

@@ -46,6 +46,7 @@ from app.core.parsers.docx_parser import DocxParser
 from app.core.parsers.txt_parser import TxtParser
 from app.core.parsers.ocr_parser import OCRParser
 from app.core.chunking import get_chunks, COMPUTE_DEVICE
+from app.core.evaluation import RagasEvaluator
 
 # ── App Setup ─────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -54,9 +55,18 @@ app = FastAPI(
     version="2.0.0"
 )
 
+# Activity Tracking
+active_tasks = 0
+
 # Standard logging configuration
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Resource Tracking
+process = psutil.Process(os.getpid())
+# Initialize CPU tracking so the first call doesn't return 0
+process.cpu_percent()
+psutil.cpu_percent()
 
 # Temporary directory for file buffering during processing
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "app", "data", "uploads")
@@ -81,17 +91,49 @@ def report_progress(client_id: str, message: str):
     except Exception as e:
         logger.error("Failed to report progress (Bridge might be down): %s", str(e))
 
+def _get_container_mem():
+    """Reads container memory from cgroups if available."""
+    try:
+        # Cgroup V2 (Standard in modern Docker/WSL2)
+        if os.path.exists('/sys/fs/cgroup/memory.current'):
+            with open('/sys/fs/cgroup/memory.current', 'r') as f:
+                used = int(f.read())
+            with open('/sys/fs/cgroup/memory.max', 'r') as f:
+                limit_str = f.read().strip()
+                limit = int(limit_str) if limit_str != "max" else psutil.virtual_memory().total
+            return round((used / limit) * 100, 1), used // (1024**2)
+        # Cgroup V1 Fallback
+        elif os.path.exists('/sys/fs/cgroup/memory/memory.usage_in_bytes'):
+            with open('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'r') as f:
+                used = int(f.read())
+            with open('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'r') as f:
+                limit = int(f.read())
+            return round((used / limit) * 100, 1), used // (1024**2)
+    except:
+        pass
+    return None, None
+
 @app.get("/system/stats")
 async def get_system_stats():
     """
     Performance Telemetry.
-    Returns real-time CPU, RAM, and GPU stats to help users monitor workloads.
-    The 'device' field tells the frontend which compute backend is active.
+    Returns real-time CPU, RAM, and GPU stats. 
+    Now 'container-aware' to fix incorrect reporting in Docker/WSL2.
     """
+    container_pct, container_mb = _get_container_mem()
+    
+    # Process-specific metrics (often what users actually care about)
+    proc_mem_mb = process.memory_info().rss // (1024**2)
+    proc_cpu_pct = process.cpu_percent()
+    
     stats = {
-        "cpu": psutil.cpu_percent(interval=None),
-        "memory": psutil.virtual_memory().percent,
+        "cpu": psutil.cpu_percent(), # System/VM CPU
+        "memory": container_pct or psutil.virtual_memory().percent, # Container or VM RAM
+        "process_cpu": proc_cpu_pct,
+        "process_mem_mb": proc_mem_mb,
+        "container_mem_mb": container_mb,
         "device": COMPUTE_DEVICE,
+        "pipeline_status": "PROCESSING" if active_tasks > 0 else "IDLE",
         "gpu": None,
     }
 
@@ -99,17 +141,18 @@ async def get_system_stats():
     if COMPUTE_DEVICE == "cuda":
         try:
             import torch
-            gpu_props = torch.cuda.get_device_properties(0)
-            allocated_mb  = torch.cuda.memory_allocated(0) / (1024 ** 2)
-            reserved_mb   = torch.cuda.memory_reserved(0)  / (1024 ** 2)
-            total_mb      = gpu_props.total_memory          / (1024 ** 2)
-            stats["gpu"] = {
-                "name":         gpu_props.name,
-                "vram_total_mb": round(total_mb),
-                "vram_used_mb":  round(reserved_mb),
-                "vram_free_mb":  round(total_mb - reserved_mb),
-                "utilization":   round((reserved_mb / total_mb) * 100, 1),
-            }
+            if torch.cuda.is_available():
+                gpu_props = torch.cuda.get_device_properties(0)
+                allocated_mb  = torch.cuda.memory_allocated(0) / (1024 ** 2)
+                reserved_mb   = torch.cuda.memory_reserved(0)  / (1024 ** 2)
+                total_mb      = gpu_props.total_memory          / (1024 ** 2)
+                stats["gpu"] = {
+                    "name":         gpu_props.name,
+                    "vram_total_mb": round(total_mb),
+                    "vram_used_mb":  round(reserved_mb),
+                    "vram_free_mb":  round(total_mb - reserved_mb),
+                    "utilization":   round((reserved_mb / total_mb) * 100, 1),
+                }
         except Exception as e:
             stats["gpu"] = {"error": str(e)}
 
@@ -153,6 +196,15 @@ class RetrieveRequest(BaseModel):
     collection_name: str
     query: str
     n_results: int = 4
+    search_type: Literal["dense", "hybrid"] = "hybrid"
+    rerank: bool = True
+
+class EvaluateRequest(BaseModel):
+    """Request schema for RAGAS evaluation."""
+    query: str
+    answer: str
+    context: List[str]
+    ground_truth: Optional[str] = None
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────
@@ -178,6 +230,8 @@ async def parse_document(
     4. Cleans up temporary files.
     """
     file_path = os.path.join(UPLOAD_DIR, file.filename)
+    global active_tasks
+    active_tasks += 1
     
     try:
         # 1. Buffered Input: Save raw binary to local disk for parser access
@@ -227,6 +281,7 @@ async def parse_document(
     
     finally:
         # 4. Storage Management: Delete buffered file to prevent disk exhaustion
+        active_tasks -= 1
         if os.path.exists(file_path):
             os.remove(file_path)
 
@@ -239,6 +294,8 @@ async def chunk_text(request: ChunkRequest):
     3. Vectorizes using Dense, Sparse, Hybrid, or Late Interaction (ColBERT).
     4. Returns list of intelligent chunks.
     """
+    global active_tasks
+    active_tasks += 1
     try:
         if request.client_id:
             report_progress(request.client_id, f"INFO: Starting {request.method.upper()} chunking with {request.vector_method.upper()} vectorization...")
@@ -265,6 +322,8 @@ async def chunk_text(request: ChunkRequest):
     except Exception as e:
         logger.error(f"Chunking failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        active_tasks -= 1
 
 @app.post("/retrieve", tags=["RAG"])
 async def retrieve_context(request: RetrieveRequest):
@@ -273,13 +332,38 @@ async def retrieve_context(request: RetrieveRequest):
     Searches ChromaDB for relevant text fragments.
     """
     try:
-        from app.core.chunking import VectorManager
         vm = VectorManager()
-        context = vm.retrieve_context(request.collection_name, request.query, request.n_results)
+        context = vm.retrieve_context(
+            request.collection_name, 
+            request.query, 
+            request.n_results,
+            search_type=request.search_type,
+            rerank=request.rerank
+        )
         return {"context": context, "status": "success"}
     except Exception as e:
         logger.error(f"Retrieval failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/evaluate", tags=["RAG"])
+async def evaluate_rag(request: EvaluateRequest):
+    """
+    RAG Evaluation Endpoint.
+    Uses RAGAS to compute faithfulness, relevance, and precision/recall.
+    """
+    try:
+        evaluator = RagasEvaluator()
+        scores = await evaluator.evaluate_qna(
+            request.query, 
+            request.answer, 
+            request.context,
+            request.ground_truth
+        )
+        return {"scores": scores, "status": "success"}
+    except Exception as e:
+        logger.error(f"Evaluation failed: {e}")
+        # Return empty scores instead of crashing, as evaluation is often 'best-effort'
+        return {"scores": {}, "error": str(e), "status": "error"}
 
 
 @app.get("/", tags=["Health"])

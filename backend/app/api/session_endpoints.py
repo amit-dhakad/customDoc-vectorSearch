@@ -149,13 +149,32 @@ async def ask_question(session_id: str, message: schemas.MessageCreate, db: Sess
     # 2. Trigger RAG Pipeline
     from app.services.rag_service import RAGService
     rag = RAGService()
-    answer = await rag.generate_rag_answer(session_id, message.content, model=message.model)
+    result = await rag.generate_rag_answer(
+        session_id, 
+        message.content, 
+        model=message.model,
+        search_type=message.search_type,
+        rerank=message.enable_reranking
+    )
+    answer = result.get("answer", "")
+    metrics = result.get("metrics", {})
+    scores = result.get("scores", {})
 
-    # 3. Store AI Response
+    # 3. Store AI Response with Metrics & RAGAS Scores
     ai_db_msg = models.Message(
         session_id=session_id,
         role="assistant",
-        content=answer
+        content=answer,
+        total_latency_ms=metrics.get("total_latency_ms"),
+        retrieval_latency_ms=metrics.get("retrieval_latency_ms"),
+        generation_latency_ms=metrics.get("generation_latency_ms"),
+        prompt_tokens=metrics.get("prompt_tokens"),
+        completion_tokens=metrics.get("completion_tokens"),
+        # Persist RAGAS scores 
+        faithfulness=scores.get("faithfulness"),
+        answer_relevancy=scores.get("answer_relevancy"),
+        context_precision=scores.get("context_precision"),
+        context_recall=scores.get("context_recall")
     )
     db.add(ai_db_msg)
     db.commit()

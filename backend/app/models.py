@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Boolean, Text, Float
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
@@ -128,6 +128,19 @@ class Message(Base):
     role = Column(String)  # 'user' or 'assistant'
     content = Column(Text)
     timestamp = Column(DateTime, default=datetime.utcnow)
+
+    # Performance & Evaluation Metrics
+    total_latency_ms = Column(Integer, nullable=True)     # Overall request time
+    retrieval_latency_ms = Column(Integer, nullable=True) # Time spent in Vector Search
+    generation_latency_ms = Column(Integer, nullable=True)# Time spent in LLM Inference
+    prompt_tokens = Column(Integer, nullable=True)        # Input tokens (if provided by LLM)
+    completion_tokens = Column(Integer, nullable=True)    # Output tokens (if provided by LLM)
+    
+    # RAGAS Quality Scores (0.0 - 1.0)
+    faithfulness = Column(Float, nullable=True)
+    answer_relevancy = Column(Float, nullable=True)
+    context_precision = Column(Float, nullable=True)
+    context_recall = Column(Float, nullable=True)
     
     session = relationship("Session", back_populates="messages")
     

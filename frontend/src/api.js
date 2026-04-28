@@ -33,6 +33,7 @@ export const api = {
   sendMessage: (sessionId, role, content) => axios.post(`${API_BASE_URL}/sessions/${sessionId}/messages`, { role, content }),
   async askQuestion(sessionId, query, model, searchType, nResults, rerank, hyde) {
       return axios.post(`${API_BASE_URL}/sessions/${sessionId}/ask`, {
+          role: 'user',
           content: query,
           model,
           search_type: searchType,

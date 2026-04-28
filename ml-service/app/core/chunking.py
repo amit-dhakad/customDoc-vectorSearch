@@ -51,7 +51,16 @@ logger = logging.getLogger(__name__)
 def _detect_device() -> str:
     """Auto-selects the best available compute device."""
     try:
+        import os
         import torch
+        
+        # Diagnostic: Check for nvidia devices in /dev
+        nvidia_devices = [f for f in os.listdir("/dev") if f.startswith("nvidia")] if os.path.exists("/dev") else []
+        if nvidia_devices:
+            logger.info(f"[DEVICE] Found NVIDIA nodes in /dev: {nvidia_devices}")
+        else:
+            logger.warning("[DEVICE] No NVIDIA devices found in /dev. GPU passthrough might be disabled.")
+
         if torch.cuda.is_available():
             device = "cuda"
             gpu_name = torch.cuda.get_device_name(0)
@@ -63,12 +72,38 @@ def _detect_device() -> str:
         else:
             device = "cpu"
             logger.info("[DEVICE] ⚠️ No GPU detected — falling back to CPU")
-    except ImportError:
+            if torch.cuda.device_count() == 0:
+                logger.info("[DEVICE] torch.cuda.device_count() is 0. Check your Docker GPU reservation.")
+            
+    except Exception as e:
         device = "cpu"
-        logger.warning("[DEVICE] torch not installed — defaulting to CPU")
+        logger.error(f"[DEVICE] Detection error: {e}. Defaulting to CPU.")
     return device
 
 COMPUTE_DEVICE: str = _detect_device()
+
+# ── Global Model Registry (Singleton-style) ──────────────────────────────────
+# We maintain global instances to prevent reloading 400MB+ models on every query.
+_sentence_transformer_model = None
+_cross_encoder_model = None
+
+def get_sentence_transformer():
+    global _sentence_transformer_model
+    if _sentence_transformer_model is None:
+        from sentence_transformers import SentenceTransformer
+        model_name = "all-MiniLM-L6-v2"
+        _sentence_transformer_model = SentenceTransformer(model_name, device=COMPUTE_DEVICE)
+        logger.info(f"[EMBEDDINGS] Singleton model '{model_name}' initialized on: {COMPUTE_DEVICE}")
+    return _sentence_transformer_model
+
+def get_cross_encoder():
+    global _cross_encoder_model
+    if _cross_encoder_model is None:
+        from sentence_transformers import CrossEncoder
+        model_name = "cross-encoder/ms-marco-MiniLM-L6-v2"
+        _cross_encoder_model = CrossEncoder(model_name, device=COMPUTE_DEVICE)
+        logger.info(f"[RERANKER] Singleton model '{model_name}' initialized on: {COMPUTE_DEVICE}")
+    return _cross_encoder_model
 
 
 # Lightweight Embedding Wrapper for Semantic Chunking
@@ -79,9 +114,8 @@ class LocalEmbeddings(Embeddings):
     Auto-uses CUDA/MPS if available, falls back to CPU otherwise.
     """
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        from sentence_transformers import SentenceTransformer
-        self.model = SentenceTransformer(model_name, device=COMPUTE_DEVICE)
-        logger.info(f"[EMBEDDINGS] Loaded '{model_name}' on device: {COMPUTE_DEVICE}")
+        # Access the singleton instead of reloading
+        self.model = get_sentence_transformer()
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
         return self.model.encode(texts, device=COMPUTE_DEVICE).tolist()
@@ -179,10 +213,8 @@ class VectorManager:
     def __init__(self, host: str = "chromadb", port: int = 8000):
         self.client = chromadb.HttpClient(host=host, port=port)
         self.embeddings = LocalEmbeddings()
-        # Initialize Reranker (Load once)
-        from sentence_transformers import CrossEncoder
-        self.reranker = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2', device=COMPUTE_DEVICE)
-        logger.info(f"[RERANKER] Loaded 'ms-marco-MiniLM-L-6-v2' on {COMPUTE_DEVICE}")
+        # Access the singleton instead of reloading
+        self.reranker = get_cross_encoder()
 
     def upsert_chunks(
         self, 
@@ -286,13 +318,21 @@ class VectorManager:
     def _bm25_search(self, collection, query: str, n_results: int) -> List[str]:
         """Performs BM25 keyword search on all documents in the collection."""
         try:
-            # Fetch all documents in this collection
-            # WARNING: This can be slow for millions of docs. 
-            # In production, use Chroma's built-in sparse indexing if available.
-            all_docs = collection.get()
+            # Fetch documents in this collection
+            # OPTIMIZATION: We fetch documents but limit them or check count first.
+            # BM25 requires the corpus, so for large-scale production, a dedicated 
+            # sparse index (ElasticSearch/OpenSearch) is preferred.
+            
+            # Fetch with limit to prevent OOM/Timeouts for massive sessions
+            MAX_BM25_CORPUS = 5000 
+            all_docs = collection.get(limit=MAX_BM25_CORPUS)
             docs = all_docs["documents"]
+            
             if not docs:
                 return []
+
+            if len(docs) >= MAX_BM25_CORPUS:
+                logger.warning(f"[BM25] Corpus capped at {MAX_BM25_CORPUS} elements for keyword search performance.")
 
             tokenized_corpus = [doc.lower().split() for doc in docs]
             bm25 = BM25Okapi(tokenized_corpus)

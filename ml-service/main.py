@@ -38,14 +38,14 @@ import logging
 import httpx
 import psutil
 from pydantic import BaseModel
-from typing import Literal, Optional
+from typing import Literal, Optional, List
 
 # ── Dynamic Import of Engine Implementations ───────────────────────────────
 from app.core.parsers.pdf_parser import PDFParser
 from app.core.parsers.docx_parser import DocxParser
 from app.core.parsers.txt_parser import TxtParser
 from app.core.parsers.ocr_parser import OCRParser
-from app.core.chunking import get_chunks, COMPUTE_DEVICE
+from app.core.chunking import get_chunks, VectorManager, COMPUTE_DEVICE
 from app.core.evaluation import RagasEvaluator
 
 # ── App Setup ─────────────────────────────────────────────────────────────
@@ -54,6 +54,27 @@ app = FastAPI(
     description="Unified API for Document Extraction (PDF, DOCX, TXT, OCR Images)",
     version="2.0.0"
 )
+
+@app.on_event("startup")
+async def startup_event():
+    """Initializes models in a separate thread to prevent blocking the web server."""
+    import asyncio
+    from concurrent.futures import ThreadPoolExecutor
+    
+    def load_models_sync():
+        logger.info("[STARTUP] Pre-warming ML models in background thread...")
+        try:
+            from app.core.chunking import get_sentence_transformer, get_cross_encoder
+            # These are CPU/IO bound, so we run them in a thread
+            get_sentence_transformer()
+            get_cross_encoder()
+            logger.info("[STARTUP] Infrastructure pre-warmed and ready.")
+        except Exception as e:
+            logger.error(f"[STARTUP] Pre-warming failed: {e}")
+
+    loop = asyncio.get_event_loop()
+    # Execute the blocking loading logic as a background thread task
+    loop.run_in_executor(None, load_models_sync)
 
 # Activity Tracking
 active_tasks = 0

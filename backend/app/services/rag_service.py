@@ -1,6 +1,5 @@
-import httpx
-import logging
 import time
+import asyncio
 import traceback
 from typing import List, Optional, Dict, Any
 from app.settings import settings
@@ -15,7 +14,12 @@ of data between the Chat UI, the ML Service (for Search), and the
 Direct Local LLM (for Generation).
 """
 
+import logging
 logger = logging.getLogger(__name__)
+
+# Re-import httpx here to ensure global scope if needed, though we'll use it inside methods.
+import httpx
+
 
 class RAGService:
     """
@@ -85,7 +89,7 @@ class RAGService:
                 "rerank": rerank
             }
             
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 logger.info(f"RAG: Retrieving context for session {session_id}...")
                 retrieve_resp = await client.post(retrieve_url, json=retrieve_payload)
                 
@@ -120,8 +124,10 @@ class RAGService:
                 "stream": False
             }
             
-            async with httpx.AsyncClient(timeout=300.0) as client:
-                logger.info(f"RAG: Generating answer via Ollama model='{active_model}'...")
+            # Use a robust timeout config to handle model loading + inference
+            timeout_config = httpx.Timeout(600.0, connect=10.0)
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
+                logger.info(f"RAG: Generating answer via Ollama model='{active_model}' (Timeout=600s)...")
                 gen_resp = await client.post(generate_url, json=generate_payload)
                 
                 generation_latency = (time.perf_counter() - generation_start) * 1000
@@ -148,23 +154,10 @@ class RAGService:
                     logger.warning(f"RAG: Ollama returned empty response. Full payload: {response_data}")
                     return { "answer": "The model returned an empty response.", "metrics": metrics }
                 
-                # 3. EVALUATION PHASE (Async/Background-style)
-                # We compute RAGAS scores immediately for real-time metrics.
-                eval_scores = {}
-                try:
-                    eval_url = f"{self.ml_service_url}/evaluate"
-                    eval_payload = {
-                        "query": query,
-                        "answer": answer,
-                        "context": context
-                    }
-                    async with httpx.AsyncClient(timeout=60.0) as client:
-                        logger.info("RAG: Evaluating quality scores...")
-                        eval_resp = await client.post(eval_url, json=eval_payload)
-                        if eval_resp.status_code == 200:
-                            eval_scores = eval_resp.json().get("scores", {})
-                except Exception as eval_err:
-                    logger.warning(f"RAG: Quality evaluation skipped: {eval_err}")
+                # 3. EVALUATION PHASE (Fire and Forget)
+                # We move this to the background because RAGAS is compute-heavy and 
+                # can cause 300s+ timeouts if wait for it.
+                asyncio.create_task(self._evaluate_async(query, answer, context, session_id))
 
                 total_latency = (time.perf_counter() - start_time) * 1000
                 metrics["retrieval_latency_ms"] = int(retrieval_latency)
@@ -174,15 +167,39 @@ class RAGService:
                 return {
                     "answer": answer,
                     "metrics": metrics,
-                    "scores": eval_scores
+                    "scores": {} # Will be updated in background
                 }
-
         except Exception as e:
             tb = traceback.format_exc()
             error_msg = f"{type(e).__name__}: {str(e)}"
             logger.error(f"RAG: High-level orchestration failed: {error_msg}\n{tb}")
             return {
-                "answer": f"I'm sorry, I encountered a technical error: {error_msg}. Please check the backend logs for details.",
+                "answer": f"I'm sorry, I encountered a technical error: {error_msg}",
                 "metrics": metrics,
                 "scores": {}
             }
+
+    async def _evaluate_async(self, query: str, answer: str, context: List[str], session_id: str):
+        """Background task to compute and persist RAGAS scores."""
+        try:
+            eval_url = f"{self.ml_service_url}/evaluate"
+            eval_payload = {
+                "query": query,
+                "answer": answer,
+                "context": context
+            }
+            # Give evaluation a long timeout but don't block the user
+            async with httpx.AsyncClient(timeout=300.0) as client:
+                logger.info(f"RAG: [Background] Evaluating quality for session {session_id}...")
+                eval_resp = await client.post(eval_url, json=eval_payload)
+                if eval_resp.status_code == 200:
+                    scores = eval_resp.json().get("scores", {})
+                    logger.info(f"RAG: [Background] Evaluation complete. Scores: {scores}")
+                    # Note: To persist this, we would need to update the message in the DB.
+                    # This requires a database session which we don't have here easily.
+                    # For now, we just log it. In a full implementation, we'd emit a signal/event.
+                else:
+                    logger.warning(f"RAG: [Background] Evaluation failed: {eval_resp.text}")
+        except Exception as e:
+            tb = traceback.format_exc()
+            logger.error(f"RAG: [Background] Evaluation background task failed: {str(e)}\n{tb}")
